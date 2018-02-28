@@ -6,7 +6,7 @@ I simply love Arch Linux' `pacman`; but I think it falls short when it comes to 
 
 What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked -unlike Parabola itself who simply forces, prevents the user from installing the program- whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
-![alt_tag](https://github.com/leo-arch/pacman-freedom/free_pacman.png)
+![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/free_pacman.png)
 
 You can use this wrapper in two ways:
 a) Copy it to some place in your `$HOME`, or whatever you want, name it as you please, and run it just as you run any local script or program. Example:
