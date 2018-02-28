@@ -4,9 +4,11 @@
 
 I simply love Arch Linux' `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; and it should. 
 
-What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked -unlike Parabola itself who simply forces, prevents the user from installing the program- whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
+What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked -unlike Parabola itself who simply FORCES, prevents the user from installing the program-* whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
 ![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/free_pacman.png)
+
+Of course, it's far from perfect, but it's better than nothing.
 
 ## Using pacman-freedom:
 
@@ -28,7 +30,7 @@ I also added a simple function to `pacman` (-C | --check) to make it able to sca
 ## Adding the [libre] repository
 
 Though not necessary, you can take full advantage of this wrapper by adding Parabola's repository, called `libre`, to your
-pacman database. 
+`pacman` database. 
 
 1. Go to `/etc/pacman.conf` and make this change:
 
@@ -42,7 +44,7 @@ pacman database.
 
 `RemoteFileSigLevel = Never` ----> `#RemoteFileSigLevel = Required`
 
-4. Download a plain text file containing Parabola's mirrorlist from Parabola'sofficial site: 
+4. Download a plain text file containing Parabola's mirrorlist from Parabola's official site: 
 
        # curl -o /etc/pacman.d/parabola_mirrorlist https://parabola.serverpit.com//mirrorlist.txt
 
@@ -62,13 +64,11 @@ Server = http://mirror.fsf.org/parabola/$repo/os/$arch
        
        # pacman -Sy
 
-7. List the packages contained in the libre repo:
+7. List the packages contained in the `[libre]` repo:
 
        $ pacman -Sl libre
 
-8. DECIDE whether you want to install some of these pacakges. I you so decide, let pacman know which repo contains the package you want to install. Why? Because some packages in the `[libre]` repo have the same name as its non-free version. For example, the free/libre version of midori is named -just like the non-free version- "midori", in the libre repo.
+8. DECIDE whether you want to install some of these pacakges. I you so decide, let pacman know which repo contains the package you want to install. Why? Because some packages in the `[libre]` repo have the same name as its non-free version. For example, the free/libre version of midori is named in the `[libre]` repo -just like the non-free version- "midori".
 
        # pacman -S libre/midori
-
-Of course, it's far from perfect, but it's better than nothing.
 
