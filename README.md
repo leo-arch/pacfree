@@ -23,7 +23,7 @@ b. A much better alternative is to place this wrapper, without modifying its nam
 
 I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free, official installed packages.
 
-![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/pacman_c.png)
+![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/pacman-c.png)
 
 Of course, it's far from perfect, but it's better than nothing.
 
