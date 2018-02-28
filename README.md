@@ -21,7 +21,7 @@ a. Copy it to some place in your `$HOME`, or whatever you want, name it as you p
 
 b. A much better alternative is to place this wrapper, without modifying its name, in `/usr/local/sbin` or `/usr/local/bin`. In doing this, insofar as `/usr/local/sbin` comes before `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line the wrapper will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
-I also added a simple function to `pacman` (-c | --check) to make it able to scan the computer looking for non-free, official installed packages.
+I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free, official installed packages.
 
 Of course, it's far from perfect, but it's better than nothing.
 
