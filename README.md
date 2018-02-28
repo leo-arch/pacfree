@@ -2,13 +2,13 @@
 
 > Make pacman free-software aware
 
+![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/free_pacman.png)
+
 I simply love Arch Linux' `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; and it should. 
 
 What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked -unlike Parabola itself who simply FORCES, prevents the user from installing the program- whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
-![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/free_pacman.png)
-
-Of course, it's far from perfect, but it's better than nothing.
+Of course, the wrapper is far from perfect, but it's better than nothing.
 
 ## Using pacman-freedom:
 
@@ -72,4 +72,6 @@ Server = http://mirror.fsf.org/parabola/$repo/os/$arch
 
        # pacman -S libre/midori
 
-NOTE: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this is completely stupid: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: There's no free-software issue here, but just a trademaerking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre" (in a horrible magenta color). 
+NOTE: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this is completely stupid: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre" (in a horrible magenta color!).
+
+So, simply check what you want to install from the `[libre]` repo before installing it. 
