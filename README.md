@@ -4,14 +4,14 @@
 
 ![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/free_pacman.png)
 
-I simply love Arch Linux' `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; and it should. 
+I simply love Arch Linux' `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
 What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
-This point is absolutely relevant: WARNING the user about proprietary software is one thing, and FORCING the user not to install
-proprietary sofware, as Parabola does (via its `your-freedom` package), is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. Someone who is forced tp do the right thing would be a good robot, a good machine, but not a good person. This is where Parabola, and all the FSF endorsed distributions as well, is wrong; and this is why I wrote this wrapper: it will warn you about non-free software, but it's up to you what to do about it.
+This point is absolutely relevant: WARNING the user about proprietary software is one thing, and FORCING the user NOT to install
+proprietary sofware, as Parabola does (via its `your-freedom` package), is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. Someone who is forced to do the right thing would be a good robot, a good machine, but not a good person. This is where Parabola, and all the FSF endorsed distributions as well, is wrong; and this is why I wrote this wrapper: it will warn you about non-free software, but it's up to you what to do about it.
 
-Of course, the wrapper is far from perfect, but it's better than nothing.
+Even if you are concerned with free-software, just as I am, you don't need to move away from Arch: it is just too great to be left behind. Instead, you can help to make it even better, freer, and more powerful. This is the reason of this wrapper. Of course, it is far from perfect, but it's better than none.
 
 ## Using pacman-freedom:
 
@@ -20,15 +20,17 @@ Of course, the wrapper is far from perfect, but it's better than nothing.
        $ git clone https://github.com/leo-arch/pacman-freedom
 
 Navigate to the directory called `pacman-freedom`; you will find in there a file named `pacman`: that's the wrapper. Now, You can use this wrapper in two ways:
+
 a. Copy it to some place in your `$HOME`, or whatever you want, name it as you please, and run it just as you run any local script or program. Example:
 
        ~ $ ./pacman_free
 
-b. A much better alternative is to place this wrapper, without modifying its name, in `/usr/local/sbin` or `/usr/local/bin`. In doing this, insofar as `/usr/local/sbin` comes before `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line the wrapper will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
+b. A much better alternative is to place this wrapper, without modifying its name, in `/usr/local/sbin` or `/usr/local/bin`. In doing this, insofar as `/usr/local/sbin` comes before `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
-I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free, official installed packages.
+I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. A much better version of this function could be found in my `isfree` script (https://github.com/leo-arch/isfree)
 
 ![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/pacman-c.png)
+
 
 ## Adding the [libre] repository
 
