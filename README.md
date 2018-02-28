@@ -25,5 +25,50 @@ I also added a simple function to `pacman` (-C | --check) to make it able to sca
 
 ![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/pacman-c.png)
 
+## Adding the [libre] repository
+
+Though not necessary, you can take full advantage of this wrapper by adding Parabola's repository, called `libre`, to your
+pacman database. 
+
+1. Go to `/etc/pacman.conf` and make this change:
+
+`#RemoteFileSigLevel = Required` ----> `RemoteFileSigLevel = Never`
+
+2. Download and install `parabola-keyring`:
+
+       # pacman -U https://www.parabola.nu/packages/libre/any/parabola-keyring/download/
+
+3. Revert the change made to `/etc/pacman.conf`
+
+`RemoteFileSigLevel = Never` ----> `#RemoteFileSigLevel = Required`
+
+4. Download a plain text file containing Parabola's mirrorlist from Parabola'sofficial site: 
+
+       # curl -o /etc/pacman.d/parabola_mirrorlist https://parabola.serverpit.com//mirrorlist.txt
+
+or:
+
+       # curl -o /etc/pacman.d/parabola_mirrorlist https://www.parabola.nu/mirrorlist/all/
+
+5. Choose one of the mirrors provided by the downloaded mirrorlist file and add it to the end of `/etc/pacman.conf` as if it were just a custom repo named "libre".
+
+```
+[libre]
+#SigLevel = Never
+Server = http://mirror.fsf.org/parabola/$repo/os/$arch
+```
+
+6. Refresh `pacman` database:
+       
+       # pacman -Sy
+
+7. List the packages contained in the libre repo:
+
+       $ pacman -Sl libre
+
+8. DECIDE whether you want to install some of these pacakges. I you so decide, let pacman know which repo contains the package you want to install. Why? Because some packages in the `[libre]` repo have the same name as its non-free version. For example, the free/libre version of midori is named -just like the non-free version- "midori", in the libre repo.
+
+       # pacman -S libre/midori
+
 Of course, it's far from perfect, but it's better than nothing.
 
