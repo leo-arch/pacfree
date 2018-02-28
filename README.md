@@ -8,8 +8,8 @@ I simply love Arch Linux' `pacman`; but I think it falls short when it comes to 
 
 What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
-This point is absolutely relevant: warning the user about proprietary software is one thing, and FORCING the user not to install
-proprietary sofware, as Parabola does, is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. This is where Parabola, and all the FSF endorsed distributions, is wrong; and this is why I wrote this wrapper: it will warn you about non-free software, but it's up to you what to do about it.
+This point is absolutely relevant: WARNING the user about proprietary software is one thing, and FORCING the user not to install
+proprietary sofware, as Parabola does (via its `your-freedom` package), is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. Someone who is forced tp do the right thing would be a good robot, a good machine, but not a good person. This is where Parabola, and all the FSF endorsed distributions as well, is wrong; and this is why I wrote this wrapper: it will warn you about non-free software, but it's up to you what to do about it.
 
 Of course, the wrapper is far from perfect, but it's better than nothing.
 
@@ -33,7 +33,7 @@ I also added a simple function to `pacman` (-C | --check) to make it able to sca
 ## Adding the [libre] repository
 
 Though not necessary, you can take full advantage of this wrapper by adding Parabola's repository, called `libre`, to your
-`pacman` database. 
+`pacman` database.
 
 1. Go to `/etc/pacman.conf` and make this change:
 
