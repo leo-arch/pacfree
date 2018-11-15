@@ -21,11 +21,11 @@ Even if you are concerned with free-software, just as I am, you don't need to mo
 
 Navigate to the directory called `pacman-freedom`; you will find in there a file named `pacman`: that's the wrapper. Now, You can use this wrapper in two ways:
 
-a. Copy it to some place in your `$HOME`, or whatever you want, name it as you please, and run it just as you run any local script or program. Example:
+a. Copy it to some place in your `$HOME`, or wherever you want, name it as you please, and run it just as you run any local script or program. Example:
 
        ~ $ ./pacman_free
 
-b. A much better alternative is to place this wrapper, without modifying its name, in `/usr/local/sbin` or `/usr/local/bin`. In doing this, insofar as `/usr/local/sbin` comes before `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
+b. A much better alternative is to place this wrapper, without modifying its name, in `/usr/local/sbin` or `/usr/local/bin`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
 I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. A much better version of this function could be found in my `isfree` script (https://github.com/leo-arch/isfree)
 
