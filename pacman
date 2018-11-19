@@ -4,10 +4,11 @@
 #+for non-free installed packages, and -Z | --size to list packages by size
 
 ##COLORS##
-white="\033[1;37m"
-green="\033[1;32m"
 red="\033[1;31m"
+green="\033[1;32m"
 yellow='\033[1;33m'
+blue="\033[1;34m"
+white="\033[1;37m"
 nc="\033[0m"
 
 PROGRAM_NAME="Free-Pacman"
@@ -107,8 +108,9 @@ for arg in "$@"; do
 || echo "none")"
 		answer="."
 		valid_answers=( "y" "Y" "n" "N" )
+		msg=$(echo -e "${blue}:: ${white}Do you want to install '${arg}' anyway? [y/N] $nc")
 		while [[ ! " ${valid_answers[@]} " =~ " ${answer} " && $answer != "" ]]; do
-			read -p "Do you want to install '$arg' anyway? [y/N] " answer
+			read -p "$msg" answer
 		done
 		case $answer in
 			""|n|N) continue;;
