@@ -77,7 +77,7 @@ if ! [[ -f $blacklist_file ]]; then
 	fi
 fi
 
-#Added functions
+#Added function
 if [[ $1 == "-C" || $1 == "--check" ]]; then
 	echo -e "Non-free/libre packages installed in your system: \n"
 	pkgs=( $(pacman -Qq) )
@@ -87,7 +87,7 @@ if [[ $1 == "-C" || $1 == "--check" ]]; then
 	exit 0
 fi
 
-#+If not -S, just run the intended command
+#If not -S, just run the intended command
 if [[ $@ != "-S "* && $@ != "--sync "* ]]; then 
 	/usr/bin/pacman $@
 	exit 0
