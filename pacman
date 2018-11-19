@@ -49,7 +49,7 @@ case $1 in
 		exit 0 ;;
 	-V|--version)
 		printf "%-23sFree-Pacman v%s (%s, by %s)" "" "$VERSION" "$DATE" "$AUTHOR"
-		/usr/bin/powerpill --version
+		/usr/bin/pacman --version
 		exit 0 ;;
 esac
 
