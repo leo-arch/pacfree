@@ -19,7 +19,7 @@ Even if you are concerned with free-software, just as I am, you don't need to mo
 
        $ git clone https://github.com/leo-arch/free-pacman
 
-Navigate to the directory called `free-pacman`; you will find in there a file named `pacman`: that's the wrapper. Now, You can use this wrapper in two ways:
+Navigate to the directory called `free-pacman`; you will find in there a file named `pacman`: that's the wrapper. Now, you can use this wrapper in two ways:
 
 a. Copy it to some place in your `$HOME`, or wherever you want, name it as you please, and run it just as you run any local script or program. Example:
 
