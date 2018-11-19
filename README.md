@@ -1,4 +1,4 @@
-# Pacman-freedom
+# Free-Pacman
 
 > Make pacman free-software aware
 
@@ -13,17 +13,17 @@ proprietary sofware, as Parabola does (via its `your-freedom` package), is a com
 
 Even if you are concerned with free-software, just as I am, you don't need to move away from Arch: it is just too great to be left behind. Instead, you can help to make it even better, freer, and more powerful. This is the reason of this wrapper. Of course, it is far from perfect, but it's better than none.
 
-## Using pacman-freedom:
+## Using free-pacman:
 
 1. Clone this proyect:
 
-       $ git clone https://github.com/leo-arch/pacman-freedom
+       $ git clone https://github.com/leo-arch/free-pacman
 
 Navigate to the directory called `pacman-freedom`; you will find in there a file named `pacman`: that's the wrapper. Now, You can use this wrapper in two ways:
 
 a. Copy it to some place in your `$HOME`, or wherever you want, name it as you please, and run it just as you run any local script or program. Example:
 
-       ~ $ ./pacman_free
+       ~ $ ./pacman
 
 b. A much better alternative is to place this wrapper, without modifying its name, in `/usr/local/sbin` or `/usr/local/bin`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
