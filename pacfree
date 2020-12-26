@@ -15,13 +15,14 @@ green="\033[1;32m"
 red="\033[1;31m"
 blue="\033[1;34m"
 yellow='\033[1;33m'
+bold='\033[1m'
 nc="\033[0m"
 
 ### PROGRAM DATA ###
 
-PROGRAM_NAME="pacfree"
-VERSION="0.3.1"
-AUTHOR="L. M. Abramovich"
+ME="pacfree"
+VERSION="0.3.2"
+AUTHOR="L. Abramovich"
 DATE="Dec, 2020"
 source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
 blacklist_file="/tmp/pacman_pkgs_bl"
@@ -43,85 +44,110 @@ function help
 	arg="$1"
 	case $arg in
 		help)
-			echo -e "${PROGRAM_NAME}, the free-software aware pacman\nusage:  pacman <operation> [...]
+			echo -e "${ME}, the free-software aware pacman\nusage:  $ME <operation> [...]
 operations:
-	pacman {-h --help}
-	pacman {-V --version}
-	pacman {-D --database}  <options> <package(s)>
-	pacman {-F --files}     [options] [package(s)]
-	pacman {-Q --query}     [options] [package(s)]
-	pacman {-R --remove}    [options] <package(s)>
-	pacman {-S --sync}      [options] [package(s)]
-	pacman {-T --deptest}   [options] [package(s)]
-	pacman {-U --upgrade}   [options] <file(s)>
-	pacman {-f --checkfree}
+	$ME {-h --help}
+	$ME {-V --version}
+	$ME {-D --database}  <options> <package(s)>
+	$ME {-F --files}     [options] [package(s)]
+	$ME {-Q --query}     [options] [package(s)]
+	$ME {-R --remove}    [options] <package(s)>
+	$ME {-S --sync}      [options] [package(s)]
+	$ME {-T --deptest}   [options] [package(s)]
+	$ME {-U --upgrade}   [options] <file(s)>
+	$ME {-f --checkfree}
+	$ME {-L --add-libre}
 
-use 'pacman {-h --help}' with an operation for available options"
+use '$ME {-h --help}' with an operation for available options"
 		;;
 
-		checkfree)
-			echo -e "List all non-free installed packages\nusage: pacman {-f --checkfree}"
+		"checkfree")
+			echo -e "List all non-free installed packages\nusage: $ME {-f --checkfree}"
+		;;
+
+		"addlibre")
+			echo -e "Add and enable the [libre] repository to pacman database\nusage: $ME {-L --add-libre}"
 		;;
 	esac
 }
 
-### MAIN ###
+function addlibre ()
+{
+	if [[ $(/usr/bin/pacman -Sl libre 2>/dev/null) ]]; then
+		echo "$ME: The [libre] repository is already enabled. Nothing to do"
+		exit $EXIT_SUCCESS
+	fi
+	
+	/usr/bin/sudo /usr/bin/true
+	
+	keyring_url="https://www.parabola.nu/packages/libre/x86_64/parabola-keyring/download"
+	mirrorlist_url="https://mirror.fsf.org/parabola/mirrorlist.txt"
+		
+	RFSL_OK=0
+	if [[ $(/usr/bin/grep "^RemoteFileSigLevel = Never$" /etc/pacman.conf) ]]; then
+		RFSL_OK=1
+	fi
+		
+	if [[ RFSL_OK -eq 0 ]]; then
+		echo -e "${blue}::$nc$bold Setting RemoteFileSigLevel to Never...$nc "
+		/usr/bin/sudo /usr/bin/sed -i \
+		'/RemoteFileSigLevel/a RemoteFileSigLevel = Never' \
+		/etc/pacman.conf
+	fi
 
-# Modified version of pacman help
-case "$1" in
-	''|-h|--help)
-		help "help"
-		exit $EXIT_SUCCESS ;;
-	-V|--version)
-		printf "%-23sFree-Pacman v%s (%s, by %s)" "" "$VERSION" "$DATE" "$AUTHOR"
-		/usr/bin/pacman --version
-		exit $EXIT_SUCCESS ;;
-esac
+	echo -e "${blue}::$nc$bold Installing parabola-kerying...$nc "
+	/usr/bin/sudo /usr/bin/pacman -U "$keyring_url"
 
-case "$2" in
-	-h|--help)
-		case "$1" in
-			-f|--checkfree) help "checkfree" ;;
-			*) /usr/bin/pacman "$1" --help ;;
-		esac
-		exit $EXIT_SUCCESS ;;
-esac
+	if [[ RFSL_OK -eq 0 ]]; then		
+		echo -e "${blue}::$nc$bold Reverting changes made to RemoteFileSigLevel...$nc "
+		/usr/bin/sudo /usr/bin/sed -i '/RemoteFileSigLevel = Never/d' \
+		/etc/pacman.conf
+	fi
 
-# Download the blacklist, if it doesn't exist
-if ! [[ -f $blacklist_file ]]; then
-	echo -ne "${green}==> ${white}Downloading packages blacklist... $nc"
-	[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
-	if /usr/bin/curl -s "$source" | /usr/bin/sed 's/  //g' \
-	| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
-	&> /dev/null; then
-		echo -e "${green}OK$nc"
-	# Parse the blacklist to remove technical and branding nonfree
-	#+ packs
-		/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
-		/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
-		&>/dev/null
-		/usr/bin/rm /tmp/blacklist_full
-	####
+	echo -e "${blue}::$nc$bold Downloading Parabola's mirrorlist...$nc "
+	/usr/bin/sudo /usr/bin/curl -so /etc/pacman.d/parabola_mirrorlist \
+	"$mirrorlist_url"
+
+	if ! [[ $(/usr/bin/grep "^[libre]$" /etc/pacman.conf) ]]; then
+		echo -e "${blue}::$nc$bold Adding [libre] repository to /etc/pacman.conf...$nc "
+		echo -e "\n[libre]\nInclude = /etc/pacman.d/parabola_mirrorlist" \
+		| /usr/bin/sudo /usr/bin/tee -a /etc/pacman.conf 1>/dev/null
+	fi
+
+	echo -e "${blue}::$nc$bold Updating pacman database...$nc "
+	/usr/bin/sudo /usr/bin/pacman -Sy
+
+	if [[ $(/usr/bin/pacman -Sl libre 2>/dev/null) ]]; then
+		echo -e "${green}->$nc$bold Succesfully added [libre] repository$nc"
 	else
-		echoerr "\n${red}Error${nc}: try again"
+		echoerr -e "${red}->$nc$bold Could not add [libre] repository$nc"
 		exit $EXIT_FAILURE
 	fi
-fi
+}
 
-# Added function
-case "$1" in
-	-f|--checkfree)
-		if [[ $(type -P /usr/bin/isfrees) ]]; then
-			/usr/bin/isfree -cna
+function download_bl ()
+{
+	if ! [[ -f $blacklist_file ]]; then
+		echo -ne "${green}==> ${white}Downloading packages blacklist... $nc"
+		[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
+
+		if /usr/bin/curl -s "$source" | /usr/bin/sed 's/  //g' \
+		| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
+		&> /dev/null; then
+			echo -e "${green}OK$nc"
+		# Parse the blacklist to remove technical and branding nonfree
+		#+ packs
+			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
+			/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
+			&>/dev/null
+			/usr/bin/rm /tmp/blacklist_full
+
 		else
-			for i in $(/usr/bin/pacman -Qq); do
-				/usr/bin/grep --color=always "^${i}:" "$blacklist_file"
-			done
+			echoerr "\n${red}Error${nc}: try again"
+			exit $EXIT_FAILURE
 		fi
-
-		exit $EXIT_SUCCESS
-	;;
-esac
+	fi
+}
 
 function sys_up () {
 	if /usr/bin/pacman "$1"; then
@@ -220,7 +246,60 @@ function do_sync () {
 	fi
 }
 
+
 ### MAIN ###
+
+# Modified version of pacman help
+case "$1" in
+	''|-h|--help)
+		help "help"
+		exit $EXIT_SUCCESS ;;
+	-V|--version)
+		printf "%-23s$ME v%s (%s, by %s)" "" "$VERSION" "$DATE" "$AUTHOR"
+		/usr/bin/pacman --version
+		exit $EXIT_SUCCESS ;;
+esac
+
+case "$2" in
+	-h|--help)
+		case "$1" in
+			-f|--checkfree) help "checkfree" ;;
+			-L|--add-libre) help "addlibre" ;;
+			*) /usr/bin/pacman "$1" --help ;;
+		esac
+		exit $EXIT_SUCCESS ;;
+esac
+
+# Download the blacklist, if it doesn't exist
+download_bl
+
+# Added functions
+case "$1" in
+
+	-f|--checkfree)
+		if [[ $(type -P /usr/bin/isfrees) ]]; then
+			/usr/bin/isfree -cna
+		else
+			nonfree=0
+			for i in $(/usr/bin/pacman -Qq); do
+				if /usr/bin/grep --color=always "^${i}:" "$blacklist_file"; then
+					nonfree=1
+				fi
+			done
+			
+			if [[ nonfree -eq 0 ]]; then
+				echo "No non-free packages found. RMS smiles!"
+			fi
+		fi
+
+		exit $EXIT_SUCCESS
+	;;
+	
+	-L|--add-libre)
+		addlibre
+		exit $EXIT_SUCCESS
+	;;
+esac
 
 p=( $@ )
 
