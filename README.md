@@ -15,7 +15,7 @@ Even if you are concerned with free-software, just as I am, you don't need to mo
 
 ## Using pacfree:
 
-1. Clone this proyect:
+1. Clone this project:
 
        $ git clone https://github.com/leo-arch/pacfree
 
