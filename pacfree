@@ -118,7 +118,7 @@ function addlibre ()
 	/usr/bin/sudo /usr/bin/pacman -Sy
 
 	if [[ $(/usr/bin/pacman -Sl libre 2>/dev/null) ]]; then
-		echo -e "${green}->$nc$bold Succesfully added [libre] repository$nc"
+		echo -e "${green}->$nc$bold Successfully added [libre] repository$nc"
 	else
 		echoerr -e "${red}->$nc$bold Could not add [libre] repository$nc"
 		exit $EXIT_FAILURE
