@@ -114,9 +114,16 @@ case "$1" in
 		if [[ $(type -P /usr/bin/isfrees) ]]; then
 			/usr/bin/isfree -cna
 		else
+			nonfree=0
 			for i in $(/usr/bin/pacman -Qq); do
-				/usr/bin/grep --color=always "^${i}:" "$blacklist_file"
+				if /usr/bin/grep --color=always "^${i}:" "$blacklist_file"; then
+					nonfree=1
+				fi
 			done
+			
+			if [[ nonfree -eq 0 ]]; then
+				echo "No non-free packages found. RMS smiles!"
+			fi
 		fi
 
 		exit $EXIT_SUCCESS
