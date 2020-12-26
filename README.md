@@ -1,10 +1,10 @@
 # pacfree
 
-> Make pacman free-software aware
+> Making pacman free-software aware
 
 ![alt_tag](https://github.com/leo-arch/pacfree/blob/master/free_pacman2.png)
 
-I simply love Arch Linux' `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
+I simply love `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
 What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
@@ -56,12 +56,12 @@ or:
 
        # curl -o /etc/pacman.d/parabola_mirrorlist https://www.parabola.nu/mirrorlist/all/
 
-5. Choose one of the mirrors provided by the downloaded mirrorlist file and add it to the end of `/etc/pacman.conf` as if it were just a custom repo named "libre".
+5. Add the mirrorlist to the end of `/etc/pacman.conf` as if it were just a custom repo named "libre".
 
 ```
 [libre]
 #SigLevel = Never
-Server = http://mirror.fsf.org/parabola/$repo/os/$arch
+Include = /etc/pacman.d/parabola_mirrorlist
 ```
 
 6. Refresh `pacman` database:
