@@ -1,0 +1,18 @@
+pkgbase = pacfree
+	pkgdesc = Make pacman free-software aware
+	pkgver = 0.3.1
+	pkgrel = 1
+	url = https://github.com/leo-arch/pacfree
+	arch = any
+	license = GPL2
+	makedepends = git
+	depends = bash
+	depends = pacman
+	depends = coreutils
+	depends = curl
+	optdepends = isfree: Check your system for non-free software
+	source = git+https://github.com/leo-arch/pacfree.git
+	sha256sums = SKIP
+
+pkgname = pacfree
+
