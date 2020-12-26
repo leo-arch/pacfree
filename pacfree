@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+
+# Little pacman wrapper to make pacman free-software aware. This script
+#+ checks all packages to be installed against Parabola's blacklist,
+#+ warns the user if the package is non-free, and then, if the user
+#+ accepts, install the corresponding package.
+
+#+ It also adds this new option (depends on isfree):
+#+ -f | --checkfree (check for non-free installed packages)
+
+### COLORS ###
+
+white="\033[0m\e[1m"
+green="\033[1;32m"
+red="\033[1;31m"
+blue="\033[1;34m"
+yellow='\033[1;33m'
+nc="\033[0m"
+
+### PROGRAM DATA ###
+
+PROGRAM_NAME="pacfree"
+VERSION="0.3.1"
+AUTHOR="L. M. Abramovich"
+DATE="Dec, 2020"
+source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
+blacklist_file="/tmp/pacman_pkgs_bl"
+
+### EXIT CODES ###
+
+EXIT_SUCCESS=0
+EXIT_FAILURE=1
+
+### FUNCTIONS ###
+
+function echoerr ()
+{
+	echo -e "$@" >&2
+}
+
+function help
+{
+	arg="$1"
+	case $arg in
+		help)
+			echo -e "${PROGRAM_NAME}, the free-software aware pacman\nusage:  pacman <operation> [...]
+operations:
+	pacman {-h --help}
+	pacman {-V --version}
+	pacman {-D --database}  <options> <package(s)>
+	pacman {-F --files}     [options] [package(s)]
+	pacman {-Q --query}     [options] [package(s)]
+	pacman {-R --remove}    [options] <package(s)>
+	pacman {-S --sync}      [options] [package(s)]
+	pacman {-T --deptest}   [options] [package(s)]
+	pacman {-U --upgrade}   [options] <file(s)>
+	pacman {-f --checkfree}
+
+use 'pacman {-h --help}' with an operation for available options"
+		;;
+
+		checkfree)
+			echo -e "List all non-free installed packages\nusage: pacman {-f --checkfree}"
+		;;
+	esac
+}
+
+### MAIN ###
+
+# Modified version of pacman help
+case "$1" in
+	''|-h|--help)
+		help "help"
+		exit $EXIT_SUCCESS ;;
+	-V|--version)
+		printf "%-23sFree-Pacman v%s (%s, by %s)" "" "$VERSION" "$DATE" "$AUTHOR"
+		/usr/bin/pacman --version
+		exit $EXIT_SUCCESS ;;
+esac
+
+case "$2" in
+	-h|--help)
+		case "$1" in
+			-f|--checkfree) help "checkfree" ;;
+			*) /usr/bin/pacman "$1" --help ;;
+		esac
+		exit $EXIT_SUCCESS ;;
+esac
+
+# Download the blacklist, if it doesn't exist
+if ! [[ -f $blacklist_file ]]; then
+	echo -ne "${green}==> ${white}Downloading packages blacklist... $nc"
+	[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
+	if /usr/bin/curl -s "$source" | /usr/bin/sed 's/  //g' \
+	| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
+	&> /dev/null; then
+		echo -e "${green}OK$nc"
+	# Parse the blacklist to remove technical and branding nonfree
+	#+ packs
+		/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
+		/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
+		&>/dev/null
+		/usr/bin/rm /tmp/blacklist_full
+	####
+	else
+		echoerr "\n${red}Error${nc}: try again"
+		exit $EXIT_FAILURE
+	fi
+fi
+
+# Added function
+case "$1" in
+	-f|--checkfree)
+		if ! [[ $(type -P /usr/bin/isfree) ]]; then
+			echoerr "IsFree not found. See https://github.com/leo-arch/isfree"
+			exit $EXIT_FAILURE
+		fi
+		/usr/bin/isfree -cna
+		exit $EXIT_SUCCESS
+	;;
+esac
+
+function sys_up () {
+	if /usr/bin/pacman "$1"; then
+		return $EXIT_SUCCESS
+	else
+		return $EXIT_FAILURE
+	fi
+}
+
+function sys_up_pkg () {
+	# Update and/or upgrade the system
+	if sys_up "$1" -eq 0; then
+		# Rerun the program to check pkgs to be installed
+		p[0]="-S"
+		# Since first argument is "-S", the program will run do_sync()
+		#+ over pkgs to be installed
+		"$0" ${p[*]}
+	fi
+}
+
+function non_sync () {
+	# If nothing is to be installed
+	if /usr/bin/pacman ${p[*]}; then
+		exit $EXIT_SUCCESS
+	else
+		exit $EXIT_FAILURE
+	fi
+}
+
+function do_sync () {
+	OPTS=()
+
+	while [[ ${p[$i]} == "-"* ]]; do
+		OPTS[${#OPTS[*]}]=${p[$i]} # Store options
+		i=$((i+1))
+	done
+	PKGS=( ${p[*]:1} ) # packages == non-option args
+
+	repo=""
+	for arg in "${PKGS[@]}"; do
+		# If repo/pkg get the two values
+		if [[ $arg == *"/"* ]]; then
+			repo=${arg%%/*}
+			pkg=${arg##*/}
+		else
+			pkg=$arg
+		fi
+		# If $repo is some of the Parabola's repos, skip the test,
+		#+ since $pkg is supposed to be free
+		if [[ -n $repo ]]; then
+			case $repo in
+
+				'libre'|'libre-multilib'|'kernels'|'pcr'|'cross'\
+				|'nonprism'|'libre-testing'|'libre-multilib-testing'\
+				|'pcr-testing'|'nonprism-testing')
+					INSTALL_PKGS[${#INSTALL_PKGS[*]}]="${repo}/$pkg"
+					continue
+				;;
+
+				# If not in Parabola's repo, check it against the
+				#+ blacklist
+				*) ;;
+			esac
+		fi
+
+		# Check if $pkg is blacklisted
+		blacklisted="$(/usr/bin/grep "^${pkg}:" $blacklist_file)"
+		if [[ $blacklisted ]]; then
+			# If blacklisted, get alternative pkg
+			alternative="$(echo $blacklisted | /usr/bin/cut -d":" -f2)"
+			echo -e "${white}'$pkg'$nc is a ${red}non-free${nc} package\
+\n${yellow}Description${nc}: $blacklisted\
+\n${green}Alternative package${nc}: $([[ $alternative ]] && echo "$white$alternative$nc" \
+	|| echo "none")"
+			answer="."
+			valid_answers=( "y" "Y" "n" "N" )
+			msg=$(echo -e "${blue}:: ${white}Do you want to install '${arg}' anyway? [y/N] $nc")
+			while [[ ! " ${valid_answers[*]} " =~ " ${answer} " \
+			&& $answer != "" ]]; do
+				read -rp "$msg" answer
+			done
+			case $answer in
+				""|n|N) continue;;
+				y|Y) INSTALL_PKGS[${#INSTALL_PKGS[*]}]=$pkg ;;
+			esac
+		else # If free-software, just save the pkg to be installed
+			INSTALL_PKGS[${#INSTALL_PKGS[*]}]=$pkg
+		fi
+	done
+
+	# If there are pkgs to install, fire up the pac-man
+	if [[ ${#INSTALL_PKGS[@]} -gt 0 ]]; then
+		if ! /usr/bin/pacman "${OPTS[*]}" "${INSTALL_PKGS[*]}"; then
+			exit $EXIT_FAILURE
+		fi
+	fi
+}
+
+### MAIN ###
+
+p=( $@ )
+
+# This case statement covers only the most common cases of software installation.
+#+ For more complex cases like when setting a new database or a new root
+#+ location (even when using some simple combination like -Sq or -Sv), simply
+#+ use /usr/bin/pacman after making sure that whatever you want to install is
+#+ free. Take a look at my "isfree" script: github.com/leo-arch/isfree
+
+case ${p[*]} in
+	-Syu|-Su)
+		if sys_up ${p[0]} -eq 0; then
+			exit $EXIT_SUCCESS
+		else
+			exit $EXIT_FAILURE
+		fi
+	;;
+	"-Syu "*|"-Sy "*|"-Su "*) sys_up_pkg ${p[0]} ;;
+	"-S "*|"--sync "*) do_sync ;;
+	*) non_sync ;;
+esac
+
+exit $EXIT_SUCCESS
