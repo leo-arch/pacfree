@@ -2,7 +2,7 @@
 
 > Make pacman free-software aware
 
-![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/free_pacman2.png)
+![alt_tag](https://github.com/leo-arch/pacfree/blob/master/free_pacman2.png)
 
 I simply love Arch Linux' `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
@@ -29,7 +29,7 @@ b. A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/u
 
 I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. This function depends on my `isfree` script (https://github.com/leo-arch/isfree)
 
-![alt_tag](https://github.com/leo-arch/pacman-freedom/blob/master/pacman-c.png)
+![alt_tag](https://github.com/leo-arch/pacfree/blob/master/pacman-c.png)
 
 ## Adding the [libre] repository
 
