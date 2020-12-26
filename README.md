@@ -25,7 +25,7 @@ Navigate to the directory called `pacfree`; you will find here the PKGBUILD file
 
 A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/local/bin` and rename it to `pacman`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
-I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. This function depends on my `isfree` script (https://github.com/leo-arch/isfree)
+I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. If `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
 
 ![alt_tag](https://github.com/leo-arch/pacfree/blob/master/pacman-c.png)
 
