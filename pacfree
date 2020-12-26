@@ -5,8 +5,9 @@
 #+ warns the user if the package is non-free, and then, if the user
 #+ accepts, install the corresponding package.
 
-#+ It also adds this new option (depends on isfree):
+#+ It also adds two new options:
 #+ -f | --checkfree (check for non-free installed packages)
+#+ -L | --add-libre (Add and enable [libre] repository)
 
 ### COLORS ###
 
@@ -128,13 +129,12 @@ function addlibre ()
 function download_bl ()
 {
 	if ! [[ -f $blacklist_file ]]; then
-		echo -ne "${green}==> ${white}Downloading packages blacklist... $nc"
+		echo -ne "${blue}::$nc$bold Downloading packages blacklist...$nc "
 		[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
 
 		if /usr/bin/curl -s "$source" | /usr/bin/sed 's/  //g' \
 		| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
 		&> /dev/null; then
-			echo -e "${green}OK$nc"
 		# Parse the blacklist to remove technical and branding nonfree
 		#+ packs
 			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
@@ -251,9 +251,11 @@ function do_sync () {
 
 # Modified version of pacman help
 case "$1" in
+
 	''|-h|--help)
 		help "help"
 		exit $EXIT_SUCCESS ;;
+
 	-V|--version)
 		printf "%-23s$ME v%s (%s, by %s)" "" "$VERSION" "$DATE" "$AUTHOR"
 		/usr/bin/pacman --version
@@ -263,11 +265,15 @@ esac
 case "$2" in
 	-h|--help)
 		case "$1" in
+
 			-f|--checkfree) help "checkfree" ;;
+
 			-L|--add-libre) help "addlibre" ;;
+
 			*) /usr/bin/pacman "$1" --help ;;
 		esac
-		exit $EXIT_SUCCESS ;;
+		exit $EXIT_SUCCESS
+	;;
 esac
 
 # Download the blacklist, if it doesn't exist
@@ -277,7 +283,7 @@ download_bl
 case "$1" in
 
 	-f|--checkfree)
-		if [[ $(type -P /usr/bin/isfrees) ]]; then
+		if [[ $(type -P /usr/bin/isfree) ]]; then
 			/usr/bin/isfree -cna
 		else
 			nonfree=0
@@ -288,7 +294,7 @@ case "$1" in
 			done
 			
 			if [[ nonfree -eq 0 ]]; then
-				echo "No non-free packages found. RMS smiles!"
+				echo -e "${green}->$nc$bold No non-free packages found. RMS smiles!$nc"
 			fi
 		fi
 
@@ -311,9 +317,7 @@ p=( $@ )
 
 case ${p[*]} in
 	-Syu|-Su)
-		if sys_up ${p[0]} -eq 0; then
-			exit $EXIT_SUCCESS
-		else
+		if sys_up ${p[0]} -ne 0; then
 			exit $EXIT_FAILURE
 		fi
 	;;
