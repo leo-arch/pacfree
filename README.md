@@ -25,7 +25,7 @@ a. Copy it to some place in your `$HOME`, or wherever you want, name it as you p
 
        ~ $ ./pacfree
 
-b. A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/local/bin` and rename it `pacman`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
+b. A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/local/bin` and rename it to `pacman`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
 I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. This function depends on my `isfree` script (https://github.com/leo-arch/isfree)
 
