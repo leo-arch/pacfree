@@ -111,11 +111,14 @@ fi
 # Added function
 case "$1" in
 	-f|--checkfree)
-		if ! [[ $(type -P /usr/bin/isfree) ]]; then
-			echoerr "IsFree not found. See https://github.com/leo-arch/isfree"
-			exit $EXIT_FAILURE
+		if [[ $(type -P /usr/bin/isfrees) ]]; then
+			/usr/bin/isfree -cna
+		else
+			for i in $(/usr/bin/pacman -Qq); do
+				/usr/bin/grep --color=always "^${i}:" "$blacklist_file"
+			done
 		fi
-		/usr/bin/isfree -cna
+
 		exit $EXIT_SUCCESS
 	;;
 esac
