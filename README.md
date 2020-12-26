@@ -21,7 +21,7 @@ Even if you are concerned with free-software, just as I am, you don't need to mo
 
 Navigate to the directory called `pacfree`; you will find here the PKGBUILD file: Just build it and install it:
 
-       ~ $ makepkg -si
+       $ makepkg -si
 
 A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/local/bin` and rename it to `pacman`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
