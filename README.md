@@ -11,7 +11,7 @@ What I offer here is a simple `pacman` wrapper written in Bash and aimed to make
 This point is absolutely relevant: WARNING the user about proprietary software is one thing, and FORCING the user NOT to install
 proprietary sofware, as Parabola does (via its `your-freedom` package), is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. Someone who is forced to do the right thing would be a good robot, a good machine, but not a good person. This is where Parabola, and all the FSF endorsed distributions as well, is wrong; and this is why I wrote this wrapper: it will warn you about non-free software, but it's up to you what to do about it.
 
-Even if you are concerned with free-software, just as I am, you don't need to move away from Arch: it is just too great to be left behind. Instead, you can help to make it even better, freer, and more powerful. This is the reason of this wrapper. Of course, it is far from perfect, but it's better than none.
+Even if you are concerned with free-software, just as I am, you don't need to move away from Arch: it is just too great to be left behind. Instead, you can help to make it even better, more free, and more powerful. This is the reason of this wrapper. Of course, it is far from perfect, but it's better than none.
 
 ## Using pacfree:
 
