@@ -95,7 +95,7 @@ function checkfree ()
 				nonfree=1
 			fi
 		done
-			
+
 		if [[ nonfree -eq 0 ]]; then
 			echo "No non-free packages found. RMS smiles!"
 		fi
@@ -108,17 +108,17 @@ function addlibre ()
 		echo "$ME: The [libre] repository is already enabled. Nothing to do"
 		exit $EXIT_SUCCESS
 	fi
-	
+
 	/usr/bin/sudo /usr/bin/true
-	
+
 	keyring_url="https://www.parabola.nu/packages/libre/x86_64/parabola-keyring/download"
 	mirrorlist_url="https://mirror.fsf.org/parabola/mirrorlist.txt"
-		
+
 	RFSL_OK=0
 	if [[ $(/usr/bin/grep "^RemoteFileSigLevel = Never$" /etc/pacman.conf) ]]; then
 		RFSL_OK=1
 	fi
-		
+
 	if [[ RFSL_OK -eq 0 ]]; then
 		echo -e "${blue}::$nc$bold Setting RemoteFileSigLevel to Never...$nc "
 		/usr/bin/sudo /usr/bin/sed -i \
@@ -129,7 +129,7 @@ function addlibre ()
 	echo -e "${blue}::$nc$bold Installing parabola-kerying...$nc "
 	/usr/bin/sudo /usr/bin/pacman -U "$keyring_url"
 
-	if [[ RFSL_OK -eq 0 ]]; then		
+	if [[ RFSL_OK -eq 0 ]]; then
 		echo -e "${blue}::$nc$bold Reverting changes made to RemoteFileSigLevel...$nc "
 		/usr/bin/sudo /usr/bin/sed -i '/RemoteFileSigLevel = Never/d' \
 		/etc/pacman.conf
@@ -229,7 +229,7 @@ function do_sync () {
 
 	repo=""
 	for arg in "${PKGS[@]}"; do
-	
+
 		# If repo/pkg get the two values
 		if [[ $arg == *"/"* ]]; then
 			repo=${arg%%/*}
@@ -314,12 +314,12 @@ function main ()
 	esac
 
 	case "$1" in
-		
+
 		# Modified version of pacman help (B)
 		''|-h|--help)
 			help "help"
 			exit $EXIT_SUCCESS ;;
-		
+
 		-V|--version)
 			printf "%-23s$ME v%s (%s, by %s)" "" "$VERSION" "$DATE" \
 			"$AUTHOR"
@@ -331,7 +331,7 @@ function main ()
 			checkfree
 			exit $EXIT_SUCCESS
 		;;
-		
+
 		-L|--add-libre)
 			addlibre
 			exit $EXIT_SUCCESS
@@ -343,11 +343,11 @@ function main ()
 
 	p=( $@ )
 
-	# This case statement covers only the most common cases of software 
-	#+ installation. For more complex cases like when setting a new 
-	#+ database or a new root location (even when using some simple 
-	#+ combination like -Sq or -Sv), simply use /usr/bin/pacman after 
-	#+ making sure that whatever you want to install is free. Take a 
+	# This case statement covers only the most common cases of software
+	#+ installation. For more complex cases like when setting a new
+	#+ database or a new root location (even when using some simple
+	#+ combination like -Sq or -Sv), simply use /usr/bin/pacman after
+	#+ making sure that whatever you want to install is free. Take a
 	#+ look at my "isfree" script: https://github.com/leo-arch/isfree
 
 	case ${p[*]} in

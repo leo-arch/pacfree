@@ -2,7 +2,7 @@
 
 > Making pacman free-software aware
 
-![alt_tag](https://github.com/leo-arch/pacfree/blob/master/free_pacman.png)
+![pacfree](https://github.com/leo-arch/pacfree/blob/master/screenshots/free_pacman.png)
 
 I simply love `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
@@ -30,7 +30,7 @@ To preserve the "pacman" name, you can create a symlink called `/usr/local/bin/p
 
 I also added two simple functions to `pacman`: `-f --checkfree`,  to make it able to scan the computer looking for non-free installed packages. However, if `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
 
-![alt_tag](https://github.com/leo-arch/pacfree/blob/master/pacfree-f.png)
+![checkfree](https://github.com/leo-arch/pacfree/blob/master/screenshots/pacfree-f.png)
 
 The second added function is `-l --add-libre`, which automatically adds and enable the `[libre]` repository to pacman database.
 
