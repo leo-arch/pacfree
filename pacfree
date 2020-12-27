@@ -77,7 +77,7 @@ database\nusage: $ME {-L --add-libre}"
 
 function checkfree ()
 {
-	if [[ $(type -P /usr/bin/isfrees) ]]; then
+	if [[ $(type -P /usr/bin/isfree) ]]; then
 		/usr/bin/isfree -cna
 
 	else
