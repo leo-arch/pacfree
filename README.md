@@ -2,7 +2,7 @@
 
 > Making pacman free-software aware
 
-![alt_tag](https://github.com/leo-arch/pacfree/blob/master/free_pacman2.png)
+![alt_tag](https://github.com/leo-arch/pacfree/blob/master/free_pacman.png)
 
 I simply love `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
