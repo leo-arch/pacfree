@@ -13,6 +13,7 @@ pkgbase = pacfree
 	depends = grep
 	depends = sed
 	optdepends = isfree: Check your system for non-free software
+	optdepends = pacrep: Choose repositories on a per package basis
 	source = git+https://github.com/leo-arch/pacfree.git
 	sha256sums = SKIP
 
