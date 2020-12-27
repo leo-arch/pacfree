@@ -1,4 +1,4 @@
-# pacfree
+# PacFree
 
 > Making pacman free-software aware
 
