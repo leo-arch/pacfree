@@ -5,7 +5,7 @@
 #+ warns the user if the package is non-free, and then, if the user
 #+ accepts, install the corresponding package.
 
-#+ It also adds two new options:
+#+ It also adds this new option:
 #+ -f | --checkfree (check for non-free installed packages)
 #+ -L | --add-libre (Add and enable [libre] repository)
 
@@ -22,7 +22,7 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="pacfree"
-VERSION="0.3.2"
+VERSION="0.3.3"
 AUTHOR="L. Abramovich"
 DATE="Dec, 2020"
 source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
@@ -45,7 +45,8 @@ function help
 	arg="$1"
 	case $arg in
 		help)
-			echo -e "${ME}, the free-software aware pacman\nusage:  $ME <operation> [...]
+			echo -e "${ME}, the free-software aware pacman\nusage:  \
+$ME <operation> [...]
 operations:
 	$ME {-h --help}
 	$ME {-V --version}
@@ -63,13 +64,42 @@ use '$ME {-h --help}' with an operation for available options"
 		;;
 
 		"checkfree")
-			echo -e "List all non-free installed packages\nusage: $ME {-f --checkfree}"
+			echo -e "List all non-free installed packages\nusage: \
+$ME {-f --checkfree}"
 		;;
 
 		"addlibre")
-			echo -e "Add and enable the [libre] repository to pacman database\nusage: $ME {-L --add-libre}"
+			echo -e "Add and enable the [libre] repository to pacman \
+database\nusage: $ME {-L --add-libre}"
 		;;
 	esac
+}
+
+function checkfree ()
+{
+	if [[ $(type -P /usr/bin/isfrees) ]]; then
+		/usr/bin/isfree -cna
+
+	else
+		nonfree=0
+		for i in $(/usr/bin/pacman -Qq); do
+
+			# Make sure the pkg does not come from [libre]
+			if [[ $(/usr/bin/ls /var/cache/pacman/pkg/"$i"* 2>/dev/null\
+			| /usr/bin/grep '.*.par[0-9].*\|.*.parabola[0-9].*\|.*_gnu-[0-9].*') ]]; then
+				continue
+			fi
+
+			if /usr/bin/grep --color=always "^${i}:" \
+			"$blacklist_file"; then
+				nonfree=1
+			fi
+		done
+			
+		if [[ nonfree -eq 0 ]]; then
+			echo "No non-free packages found. RMS smiles!"
+		fi
+	fi
 }
 
 function addlibre ()
@@ -129,12 +159,13 @@ function addlibre ()
 function download_bl ()
 {
 	if ! [[ -f $blacklist_file ]]; then
-		echo -ne "${blue}::$nc$bold Downloading packages blacklist...$nc "
+		echo -ne "${green}==> ${white}Downloading packages blacklist... $nc"
 		[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
 
 		if /usr/bin/curl -s "$source" | /usr/bin/sed 's/  //g' \
 		| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
 		&> /dev/null; then
+			echo -e "${green}OK$nc"
 		# Parse the blacklist to remove technical and branding nonfree
 		#+ packs
 			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
@@ -150,10 +181,19 @@ function download_bl ()
 }
 
 function sys_up () {
-	if /usr/bin/pacman "$1"; then
-		return $EXIT_SUCCESS
+
+	if [[ $(type -P /usr/bin/pacrep) ]]; then
+		if /usr/bin/pacrep -a; then
+			exit $EXIT_SUCCESS
+		else
+			exit $EXIT_FAILURE
+		fi
 	else
-		return $EXIT_FAILURE
+		if /usr/bin/pacman "$1"; then
+			return $EXIT_SUCCESS
+		else
+			return $EXIT_FAILURE
+		fi
 	fi
 }
 
@@ -188,6 +228,7 @@ function do_sync () {
 
 	repo=""
 	for arg in "${PKGS[@]}"; do
+	
 		# If repo/pkg get the two values
 		if [[ $arg == *"/"* ]]; then
 			repo=${arg%%/*}
@@ -195,6 +236,7 @@ function do_sync () {
 		else
 			pkg=$arg
 		fi
+
 		# If $repo is some of the Parabola's repos, skip the test,
 		#+ since $pkg is supposed to be free
 		if [[ -n $repo ]]; then
@@ -218,9 +260,9 @@ function do_sync () {
 		if [[ $blacklisted ]]; then
 			# If blacklisted, get alternative pkg
 			alternative="$(echo $blacklisted | /usr/bin/cut -d":" -f2)"
-			echo -e "${white}'$pkg'$nc is a ${red}non-free${nc} package\
-\n${yellow}Description${nc}: $blacklisted\
-\n${green}Alternative package${nc}: $([[ $alternative ]] && echo "$white$alternative$nc" \
+			echo -e "$nc$bold'$pkg'$nc is a non-free package\
+\n$nc${bold}Description${nc}: $blacklisted\
+\n$nc${bold}Alternative package${nc}: $([[ $alternative ]] && echo "$alternative" \
 	|| echo "none")"
 			answer="."
 			valid_answers=( "y" "Y" "n" "N" )
@@ -240,90 +282,93 @@ function do_sync () {
 
 	# If there are pkgs to install, fire up the pac-man
 	if [[ ${#INSTALL_PKGS[@]} -gt 0 ]]; then
-		if ! /usr/bin/pacman "${OPTS[*]}" "${INSTALL_PKGS[*]}"; then
-			exit $EXIT_FAILURE
+		if [[ $(type -P /usr/bin/pacrep) ]]; then
+			if ! /usr/bin/pacrep -s "${INSTALL_PKGS[@]}"; then
+				exit $EXIT_FAILURE
+			fi
+		else
+			if ! /usr/bin/pacman "${OPTS[*]}" "${INSTALL_PKGS[*]}"; then
+				exit $EXIT_FAILURE
+			fi
 		fi
 	fi
 }
 
+function main ()
+{
+	case "$2" in
+
+		# Modified version of pacman help (A)
+		-h|--help)
+			case "$1" in
+
+				-f|--checkfree) help "checkfree" ;;
+
+				-L|--add-libre) help "addlibre" ;;
+
+				*) /usr/bin/pacman "$1" --help ;;
+			esac
+
+			exit $EXIT_SUCCESS ;;
+	esac
+
+	case "$1" in
+		
+		# Modified version of pacman help (B)
+		''|-h|--help)
+			help "help"
+			exit $EXIT_SUCCESS ;;
+		
+		-V|--version)
+			printf "%-23s$ME v%s (%s, by %s)" "" "$VERSION" "$DATE" \
+			"$AUTHOR"
+			/usr/bin/pacman --version
+			exit $EXIT_SUCCESS ;;
+
+		# Added functions
+		-f|--checkfree)
+			checkfree
+			exit $EXIT_SUCCESS
+		;;
+		
+		-L|--add-libre)
+			addlibre
+			exit $EXIT_SUCCESS
+		;;
+	esac
+
+	# Download the blacklist, if it doesn't exist
+	download_bl
+
+	p=( $@ )
+
+	# This case statement covers only the most common cases of software 
+	#+ installation. For more complex cases like when setting a new 
+	#+ database or a new root location (even when using some simple 
+	#+ combination like -Sq or -Sv), simply use /usr/bin/pacman after 
+	#+ making sure that whatever you want to install is free. Take a 
+	#+ look at my "isfree" script: https://github.com/leo-arch/isfree
+
+	case ${p[*]} in
+
+		-Syu|-Suy|-Su)
+			if sys_up ${p[0]} -eq 0; then
+				exit $EXIT_SUCCESS
+			else
+				exit $EXIT_FAILURE
+			fi
+		;;
+
+		"-Syu "*|"-Suy"*|"-Sy "*|"-Su "*) sys_up_pkg ${p[0]} ;;
+
+		"-S "*|"--sync "*) do_sync ;;
+
+		*) non_sync ;;
+	esac
+}
 
 ### MAIN ###
 
-# Modified version of pacman help
-case "$1" in
-
-	''|-h|--help)
-		help "help"
-		exit $EXIT_SUCCESS ;;
-
-	-V|--version)
-		printf "%-23s$ME v%s (%s, by %s)" "" "$VERSION" "$DATE" "$AUTHOR"
-		/usr/bin/pacman --version
-		exit $EXIT_SUCCESS ;;
-esac
-
-case "$2" in
-	-h|--help)
-		case "$1" in
-
-			-f|--checkfree) help "checkfree" ;;
-
-			-L|--add-libre) help "addlibre" ;;
-
-			*) /usr/bin/pacman "$1" --help ;;
-		esac
-		exit $EXIT_SUCCESS
-	;;
-esac
-
-# Download the blacklist, if it doesn't exist
-download_bl
-
-# Added functions
-case "$1" in
-
-	-f|--checkfree)
-		if [[ $(type -P /usr/bin/isfree) ]]; then
-			/usr/bin/isfree -cna
-		else
-			nonfree=0
-			for i in $(/usr/bin/pacman -Qq); do
-				if /usr/bin/grep --color=always "^${i}:" "$blacklist_file"; then
-					nonfree=1
-				fi
-			done
-			
-			if [[ nonfree -eq 0 ]]; then
-				echo -e "${green}->$nc$bold No non-free packages found. RMS smiles!$nc"
-			fi
-		fi
-
-		exit $EXIT_SUCCESS
-	;;
-	
-	-L|--add-libre)
-		addlibre
-		exit $EXIT_SUCCESS
-	;;
-esac
-
-p=( $@ )
-
-# This case statement covers only the most common cases of software installation.
-#+ For more complex cases like when setting a new database or a new root
-#+ location (even when using some simple combination like -Sq or -Sv), simply
-#+ use /usr/bin/pacman after making sure that whatever you want to install is
-#+ free. Take a look at my "isfree" script: github.com/leo-arch/isfree
-
-case ${p[*]} in
-	-Syu|-Su)
-		if sys_up ${p[0]} -ne 0; then
-			exit $EXIT_FAILURE
-		fi
-	;;
-	"-Syu "*|"-Sy "*|"-Su "*) sys_up_pkg ${p[0]} ;;
-	"-S "*|"--sync "*) do_sync ;;
-	*) non_sync ;;
-esac
+main $@
 
 exit $EXIT_SUCCESS
