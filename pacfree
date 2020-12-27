@@ -168,6 +168,7 @@ function download_bl ()
 			echo -e "${green}OK$nc"
 		# Parse the blacklist to remove technical and branding nonfree
 		#+ packs
+			echo -e "${green}OK$nc"
 			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
 			/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
 			&>/dev/null

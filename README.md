@@ -27,9 +27,9 @@ A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/
 
 ## Pacfree, IsFree, and PacRep
 
-I also added two simple functions to `pacman`: `-C --check`,  to make it able to scan the computer looking for non-free installed packages. However, if `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
+I also added two simple functions to `pacman`: `-f --checkfree`,  to make it able to scan the computer looking for non-free installed packages. However, if `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
 
-![alt_tag](https://github.com/leo-arch/pacfree/blob/master/pacman-c.png)
+![alt_tag](https://github.com/leo-arch/pacfree/blob/master/pacfree-f.png)
 
 The second added function is `-l --add-libre`, which automatically adds and enable the `[libre]` repository to pacman database.
 
