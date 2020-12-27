@@ -49,4 +49,4 @@ To deal with these issues, I wrote a script called `pacrep`, which allows us to 
 
 Before installing any package, `pacfree` will look for `pacrep` and use it if found. If not, it will execute `pacman` as usual.
 
-So, despite the fact that `isfree`, `pacfree`, and `pacrep` all work as standalone programs, they were designed to work together, as part of a bigger project: make pacman and Archlinux (without ceasing to be Archlinux), free.
+So, despite the fact that `isfree`, `pacfree`, and `pacrep` all work as standalone programs, they were designed to work together, as part of a bigger project: make pacman and Archlinux (without ceasing to be Archlinux), even more free.
