@@ -25,55 +25,26 @@ Navigate to the directory called `pacfree`; you will find here the PKGBUILD file
 
 A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/local/bin` and rename it to `pacman`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself.
 
-I also added a simple function to `pacman` (-C | --check) to make it able to scan the computer looking for non-free official installed packages. If `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
+I also added two simple functions to `pacman`: [-C --check],  to make it able to scan the computer looking for non-free official installed packages. If `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
 
 ![alt_tag](https://github.com/leo-arch/pacfree/blob/master/pacman-c.png)
+The second added function is [-l --add-libre], which automatically adds and enable the [libre] repository to pacman database.
 
-## Adding the [libre] repository
-
-Though not necessary, you can take full advantage of this wrapper by adding Parabola's repository, called `libre`, to your
-`pacman` database.
-
-1. Go to `/etc/pacman.conf` and make this change:
-
-`#RemoteFileSigLevel = Required` ----> `RemoteFileSigLevel = Never`
-
-2. Download and install `parabola-keyring`:
-
-       # pacman -U https://www.parabola.nu/packages/libre/any/parabola-keyring/download/
-
-3. Revert the change made to `/etc/pacman.conf`
-
-`RemoteFileSigLevel = Never` ----> `#RemoteFileSigLevel = Required`
-
-4. Download a plain text file containing Parabola's mirrorlist from Parabola's official site: 
-
-       # curl -o /etc/pacman.d/parabola_mirrorlist https://parabola.serverpit.com//mirrorlist.txt
-
-or:
-
-       # curl -o /etc/pacman.d/parabola_mirrorlist https://www.parabola.nu/mirrorlist/all/
-
-5. Add the mirrorlist to the end of `/etc/pacman.conf` as if it were just a custom repo named "libre".
-
-```
-[libre]
-#SigLevel = Never
-Include = /etc/pacman.d/parabola_mirrorlist
-```
-
-6. Refresh `pacman` database:
-       
-       # pacman -Sy
-
-7. List the packages contained in the `[libre]` repo:
+Now, you can list the packages contained in the `[libre]` repo:
 
        $ pacman -Sl libre
 
-8. DECIDE whether you want to install some of these pacakges. I you so decide, let pacman know which repo contains the package you want to install. Why? Because some packages in the `[libre]` repo have the same name as its non-free version. For example, the free/libre version of midori is named in the `[libre]` repo -just like the non-free version- "midori".
+and DECIDE whether you want to install some of these pacakges. I you so decide, let pacman know which repo contains the package you want to install. Why? Because some packages in the `[libre]` repo have the same name as its non-free version. For example, the free/libre version of midori is named in the `[libre]` repo -just like the non-free version- "midori".
 
        # pacman -S libre/midori
 
 NOTE: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this is completely stupid: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre" (in a horrible magenta color!).
 
 So, simply check what you want to install from the `[libre]` repo before actually installing it. 
+
+UPDATE: There are a few drawback with the above approach: 1) You need to explicitly tell pacman from which repository to install a package; 2) It does not work for upgrades: if you place the new repository, say [libre] at the bottom of the repositories list in `/etc/pacman.conf`, all packages provided both by [libre] and another repository placed on top of it, will always be installed by pacman from the first repository in the list providing that package.
+
+To deal this these issues, I wrote a script called `pacrep`, which allows us to choose pacman repositories on a per package basis (disregarding the repositories order in pacman configuration file). See https://github.com/leo-arch/pacrep.
+
+Before installing any package, `pacfree` will look for `pacrep` and use it if found. If not, it will execute `pacman` normally.
+
