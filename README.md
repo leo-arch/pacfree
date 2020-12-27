@@ -17,7 +17,7 @@ Even if you are concerned with free-software, just as I am, you don't need to mo
 
 1. Clone this project:
 
-	$ git clone https://github.com/leo-arch/pacfree
+    $ git clone https://github.com/leo-arch/pacfree
 
 Navigate to the directory called `pacfree`; you will find here the PKGBUILD file: Just build it, install it, and run it:
 
