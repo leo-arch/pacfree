@@ -19,11 +19,12 @@ Even if you are concerned with free-software, just as I am, you don't need to mo
 
        $ git clone https://github.com/leo-arch/pacfree
 
-Navigate to the directory called `pacfree`; you will find here the PKGBUILD file: Just build it and install it:
+Navigate to the directory called `pacfree`; you will find here the PKGBUILD file: Just build it, install it, and run it:
 
        $ makepkg -si
+       $ pacfree [OPTIONS]
 
-A much better alternative is to copy this wrapper to `/usr/local/sbin` or `/usr/local/bin` and rename it to `pacman`. In doing this, insofar as `/usr/local/sbin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed in place of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Another, and perhaps easier alternative, is to create an alias, making `pacman` point to `pacfree`.
+To preserve the "pacman" name, you can create a symlink called `/usr/local/bin/pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you should specify the complete path: `/usr/bin/pacman`.
 
 ## Pacfree, IsFree, and PacRep
 
