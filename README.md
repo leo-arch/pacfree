@@ -45,9 +45,9 @@ NOTE: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's
 
 This is why I removed this kind of blacklisted packages (that is, those based on trademarking and merely technical issues) from Parabola's blacklist, allowing thus only the `[nonfree]`, `[semifree]`, and `[uses-nonfree]` tags. 
 
-UPDATE: There are a few drawbacks with the above approach: 1) You need to explicitly tell pacman from which repository to install a package; 2) It does not work for upgrades: if you place the new repository, say `[libre]` at the bottom of the repositories list in `/etc/pacman.conf`, all packages provided both by `[libre]` and another repository placed on top of it, will always be installed by pacman from the first repository in the list providing that package, overriding thus our decision to install that package from `[libre]` or another non-offical repository.
+However, there are still a few drawbacks with the above approach: 1) You need to explicitly tell pacman from which repository to install a package; 2) It does not work for upgrades: if you place the new repository, say `[libre]` at the bottom of the repositories list in `/etc/pacman.conf`, all packages provided both by `[libre]` and another repository placed on top of it, will always be installed by pacman from the first repository in the list providing that package, overriding thus our decision to install that package from `[libre]` or another non-offical repository.
 
-To deal with these issues, I wrote a script called `pacrep`, which allows us to choose pacman repositories on a per package basis using rules defined in the configuration file (disregarding the repositories order in pacman configuration file). For more information see https://github.com/leo-arch/pacrep.
+To deal with these issues, I wrote a script called `pacrep`, which allows us to choose pacman repositories on a per package basis using rules defined in the configuration file (disregarding the repositories order in pacman configuration file). Just tell `pacrep` from which repository is a package to be installed/upgraded and it will always be installed/upgraded from that specific repository. For more information see https://github.com/leo-arch/pacrep.
 
 Before installing any package, `pacfree` will look for `pacrep` and use it if found. If not, it will execute `pacman` as usual.
 
