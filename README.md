@@ -4,6 +4,8 @@
 
 ![pacfree](https://github.com/leo-arch/pacfree/blob/master/screenshots/free_pacman.png)
 
+** NOTE **: Since version 0.4.0, most of the code have been rewritten and merged with `pacrep` functionality.
+
 I simply love `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
 What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
