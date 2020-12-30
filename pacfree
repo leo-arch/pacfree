@@ -6,14 +6,15 @@
 #+ checks all packages to be installed against Parabola's blacklist,
 #+ warns the user if the package is non-free, and then, if the user
 #+ accepts, installs the corresponding package. It also includes a
-#+ rules file to choose repos on a per package basis (both for 
+#+ rules file to choose repos on a per package basis (both for
 #+ upgrades and new packages installation)
 
-#+ Built-on pacfree options:
+#+ Built-in pacfree options:
 #+ -f | --check-free (check for non-free installed packages)
 #+ -L | --add-libre (Add and enable [libre] repository)
 #+ -a | --add-rule (Add new repo rule)
 #+ -l | --list-rules (List current rules)
+#+ -r | --list-repos (List currently enabled repos)
 
 ### TODO list ###
 # 1) --ignore and --ignoregroup directives won't work
@@ -33,7 +34,7 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.1"
+VERSION="0.4.2"
 AUTHOR="L. Abramovich"
 DATE="Dec, 2020"
 LICENSE="GPL2"
@@ -62,27 +63,65 @@ function help ()
 				echo "	${ME,,} {-f --check-free}
 	${ME,,} {-l --list-rules}
 	${ME,,} {-a --add-rule}	  <rule(s)>
-	${ME,,} {-L --add-libre}"
+	${ME,,} {-L --add-libre}
+	${ME,,} {-r --list-repos} [repo(s)]"
 			fi
 
-			echo -e "${ME}, the free-software aware pacman\nusage:  \
-${ME,,} <operation> [...]
-operations:
-	${ME,,} {-h --help}
-	${ME,,} {-V --version}
-	${ME,,} {-D --database}   <options> <package(s)>
-	${ME,,} {-F --files}      [options] [package(s)]
-	${ME,,} {-Q --query}      [options] [package(s)]
-	${ME,,} {-R --remove}     [options] <package(s)>
-	${ME,,} {-S --sync}       [options] [package(s)]
-	${ME,,} {-T --deptest}    [options] [package(s)]
-	${ME,,} {-U --upgrade}    [options] <file(s)>
-	${ME,,} {-f --check-free}
-	${ME,,} {-l --list-rules}
-	${ME,,} {-a --add-rule}	  <rule(s)>
-	${ME,,} {-L --add-libre}
+			echo -e "${ME}, the free-software aware pacman
+Usage: ${ME,,} <operation> [...]
 
-use '${ME,,} {-h --help}' with an operation for available options"
+Operations:
+  ${ME,,} {-h --help}
+  ${ME,,} {-V --version}
+  ${ME,,} {-D --database}   <options> <package(s)>
+  ${ME,,} {-F --files}      [options] [package(s)]
+  ${ME,,} {-Q --query}      [options] [package(s)]
+  ${ME,,} {-R --remove}     [options] <package(s)>
+  ${ME,,} {-S --sync}       [options] [package(s)]
+  ${ME,,} {-T --deptest}    [options] [package(s)]
+  ${ME,,} {-U --upgrade}    [options] <file(s)>
+
+$ME specific operations:
+  ${ME,,} [package(s)]
+  ${ME,,} {-f --check-free}
+  ${ME,,} {-l --list-rules}
+  ${ME,,} {-a --add-rule}   <rule(s)>
+  ${ME,,} {-L --add-libre}
+  ${ME,,} {-r --list-repos} [repo(s)]
+
+use '${ME,,} {-h --help}' with an operation for available options
+
+If no operation is specified, but only packages, -Syu is assumed
+
+For those users coming from Debian/RedHat based systems, the following \
+APT/DNF syntax is recognized (the pacman equivalent is \
+provided in parentheses and is always the recommended way to go):
+
+  install (-Syu)
+  install-local (-U)
+  remove (-Rns)
+  update (-Sy)
+  upgrade (-Syu)
+  search (-Ss)
+  list-installed (-Qe)
+  list-installed-native (-Qen)
+  list-installed-foreign (-Qem)
+  list-installed-deps (-Qd)
+  list-updates (-Qu)
+  list-repos (grep \"^\[.*\]\" /etc/pacman.conf | grep -v options)
+  info (-Qi)
+  info-remote (-Si)
+  list-files (-Ql)
+  provides (-Qo)
+  provides-remote (-F)
+  check (-Qk)
+  check-free (-f)
+  clean (-Sc)
+  clean-all (-Scc)
+  download (-Sw)
+  help (-h)
+  version (-V)
+  history (cat /var/log/pacman.log)"
 		;;
 
 		checkfree)
@@ -105,6 +144,10 @@ pacman database\nusage: ${ME,,} {-L --add-libre}"
 \nusage: ${ME,,} {-l --list-rules}"
 		;;
 
+		listrepos)
+			echo -e "List currently enabled repositories or check \
+repositories specified as further arguments
+usage: ${ME,,} {-r --list-repos} [repo(s)]"
 	esac
 }
 
@@ -435,6 +478,12 @@ function list_rules ()
 	fi
 }
 
+function print_version ()
+{
+	printf "%-23s$ME v%s (%s, by %s)\n%-23sLicense: %s\n%-23sWebsite: %s\n" "" "$VERSION" "$DATE" "$AUTHOR" "" "$LICENSE" "" "$WEBSITE"
+	/usr/bin/"$PACMAN" --version || exit $EXIT_FAILURE
+}
+
 function check_added_functions ()
 {
 	case "$2" in
@@ -451,6 +500,8 @@ function check_added_functions ()
 
 				-l|--list-rules) help "listrules" ;;
 
+				-r|--list-repos) help "listrepos" ;;
+
 				*) /usr/bin/"$PACMAN" "$1" --help ;;
 			esac
 
@@ -466,8 +517,7 @@ function check_added_functions ()
 		;;
 
 		-V|--version)
-			printf "%-23s$ME v%s (%s, by %s)\n%-23sLicense: %s\n%-23sWebsite: %s\n" "" "$VERSION" "$DATE" "$AUTHOR" "" "$LICENSE" "" "$WEBSITE"
-			/usr/bin/"$PACMAN" --version || exit $EXIT_FAILURE
+			print_version
 			exit $EXIT_SUCCESS
 		;;
 
@@ -495,7 +545,34 @@ function check_added_functions ()
 			add_libre_repos
 			exit $EXIT_SUCCESS
 		;;
+
+		-r|--list-repos)
+			shift
+			list_repos $@
+			exit $EXIT_SUCCESS
+		;;
 	esac
+}
+
+function list_repos ()
+{
+	if ! [[ -f /etc/pacman.conf ]]; then
+		echoerr "/etc/pacman.conf: No such file or directory"
+		exit $EXIT_ERROR
+	fi
+
+	if [[ -n "$1" ]]; then
+		for i in $@; do
+			if [[ $(/usr/bin/grep "^\[${i}\]" /etc/pacman.conf) ]]; then
+				echo -e "${green}[+]$nc [${i}]: Found" 
+			else
+				echo -e "${red}[-]$nc [${i}]: Not found" 
+			fi
+		done
+	else
+		/usr/bin/grep "^\[.*\]" /etc/pacman.conf \
+		| /usr/bin/grep -v "options"
+	fi
 }
 
 function add_rules ()
@@ -526,6 +603,24 @@ function add_rules ()
 	done
 }
 
+function print_logs ()
+{
+	LOG_FILE="/var/log/pacman.log"
+
+	if [[ -z $1 ]]; then
+		if ! /usr/bin/cat "$LOG_FILE"; then
+			exit $EXIT_FAILURE
+		fi
+
+	else
+		local args=( $@ )
+		local pkgs="$(echo "${args[*]}" | /usr/bin/sed 's/ /\\|/g')"
+		if ! /usr/bin/grep "$pkgs" "$LOG_FILE"; then
+			exit $EXIT_FAILURE
+		fi
+	fi
+}
+
 function parse_arguments ()
 {
 	sync_index=-1
@@ -533,6 +628,49 @@ function parse_arguments ()
 
 	# Get sync argument index and value
 	for (( i=0;i<${#p[*]};i++ )); do
+
+		# Allow some APT/DNF syntax for users coming from
+		#+ Debian/RedHat based systems.
+		case ${p[$i]} in
+			install) p[$i]="-Syu" ;;
+			install-local) p[$i]="-U" ;;
+			remove) p[$i]="-Rns" ;;
+			update) p[$i]="-Sy" ;;
+			upgrade) p[$i]="-Syu" ;;
+			search) p[$i]="-Ss" ;;
+			list-installed) p[$i]="-Qe" ;;
+			list-installed-native) p[$i]="-Qen" ;;
+			list-installed-foreign) p[$i]="-Qem" ;;
+			list-installed-deps) p[$i]="-Qd" ;;
+			list-updates) p[$i]="-Qu" ;;
+			info) p[$i]="-Qi" ;;
+			info-remote) p[$i]="-Si" ;;
+			list-files) p[$i]="-Ql" ;;
+			provides) p[$i]="-Qo" ;;
+			provides-remote) p[$i]="-F" ;;
+			check) p[$i]="-Qk" ;;
+			check-free) p[$i]="-f" ;;
+			clean) p[$i]="-Sc" ;;
+			clean-all) p[$i]="-Scc" ;;
+			download) p[$i]="-Sw" ;;
+
+			list-repos)
+				list_repos ${p[*]:1}
+				exit $EXIT_SUCCESS
+			;;
+			help)
+				help "help"
+				exit $EXIT_SUCCESS
+			;;
+			version)
+				print_version
+				exit $EXIT_SUCCESS
+			;;
+			history)
+				print_logs ${p[*]:1}
+				exit $EXIT_SUCCESS
+			;;
+		esac
 
 		if [[ ${p[$i]} == "-S"* || ${p[$i]} == "--sync" ]]; then
 			sync_value=${p[$i]}
@@ -551,7 +689,7 @@ are not supported. You still can use pacman configuration file instead."
 	if [[ -z $sync_value ]]; then
 		no_install=1
 
-	# Check non-install SHORT suboptions (c,g,h,i,l,s,w,p) for --sync .
+	# Check non-install SHORT suboptions (c,g,h,i,l,s,w,p) for --sync.
 	# None of these sync suboptions are intended for software
 	#+ installation. So, if some of them is found in the sync string,
 	#+ set $no_install to 1, so that check_free() and check_rules(),
@@ -563,8 +701,6 @@ are not supported. You still can use pacman configuration file instead."
 		no_install=1
 	fi
 
-	# Whatever is a valid package name goes to PKGS. Everything else
-	#+ goes to OPTS 
 	for (( i=0;i<${#p[*]};i++ )); do
 
 		[[ $i -eq $sync_index ]] && continue
@@ -577,6 +713,8 @@ are not supported. You still can use pacman configuration file instead."
 			esac
 		fi
 
+		# Whatever is a valid package name goes to PKGS. Everything
+		#+ else goes to OPTS
 		if [[ ${p[$i]} == "-"* ]]; then
 			OPTS[${#OPTS[*]}]=${p[$i]}
 		else
@@ -692,7 +830,7 @@ function check_updates ()
 	# At this point, $ups[] is always greater than zero: we have
 	#+ upgrades
 
-	# If only upgrading (no PKGS), set the only_upgrade flag to 1, 
+	# If only upgrading (no PKGS), set the only_upgrade flag to 1,
 	#+ so that check_free() won't be executed
 	[[ ${#PKGS[*]} -eq 0 ]] && only_upgrade=1
 
@@ -713,7 +851,7 @@ function check_config ()
 		echoerr "/usr/bin/pacman: Command not found"
 		exit $EXIT_ERROR
 	fi
-	
+
 	### GENERATE CONFIG FILES AND DIRECTORIES ###
 
 	[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
@@ -746,7 +884,7 @@ pac_man=pacman
 color=true
 
 # Enable or disable $ME checks for packages. Though disabling both
-# check would make $ME useless, it might be usefull in some cases
+# checks would make $ME useless, it might be usefull in some cases
 check_rules=true
 check_free=true
 " > "$CONFIG_FILE"
@@ -783,8 +921,6 @@ check_free=true
 		echoerr	"${red}[-]$nc ${PACMAN}: Command not found"
 		exit $EXIT_FAILURE
 	fi
-	
-	
 
 	color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
@@ -913,6 +1049,12 @@ function main ()
 	#+ FROM INPUT ###
 	# Pkgs to be installed are added to PKGS
 	parse_arguments
+
+	# If no operation is specified, but only package(s), -Syu
+	#+ is assumed
+	if [[ ${#OPTS[*]} -eq 0 && -z $sync_value ]]; then
+		sync_value="-Syu"
+	fi
 
 	### CHECK FOR UPDATES ###
 	# Add pkgs to be upgraded, if any, to PKGS
