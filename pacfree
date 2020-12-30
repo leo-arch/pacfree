@@ -1,32 +1,43 @@
 #!/usr/bin/env bash
 
+### DESCRIPTION ###
+
 # Little pacman wrapper to make pacman free-software aware. This script
 #+ checks all packages to be installed against Parabola's blacklist,
 #+ warns the user if the package is non-free, and then, if the user
-#+ accepts, install the corresponding package.
+#+ accepts, installs the corresponding package. It also includes a
+#+ rules file to choose repos on a per package basis (both for 
+#+ upgrades and new packages installation)
 
-#+ It also adds this new option:
-#+ -f | --checkfree (check for non-free installed packages)
+#+ Built-on pacfree options:
+#+ -f | --check-free (check for non-free installed packages)
 #+ -L | --add-libre (Add and enable [libre] repository)
+#+ -a | --add-rule (Add new repo rule)
+#+ -l | --list-rules (List current rules)
+
+### TODO list ###
+# 1) --ignore and --ignoregroup directives won't work
+# 2) Package managers different to pacman and powerpill will most
+#+ likely fail (because of having different options)
 
 ### COLORS ###
 
-white="\033[0m\e[1m"
+#white="\033[0m\e[1m"
+yellow='\033[1;33m'
 green="\033[1;32m"
 red="\033[1;31m"
 blue="\033[1;34m"
-yellow='\033[1;33m'
 bold='\033[1m'
 nc="\033[0m"
 
 ### PROGRAM DATA ###
 
-ME="pacfree"
-VERSION="0.3.3"
+ME="PacFree"
+VERSION="0.4.1"
 AUTHOR="L. Abramovich"
 DATE="Dec, 2020"
-source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
-blacklist_file="/tmp/pacman_pkgs_bl"
+LICENSE="GPL2"
+WEBSITE="https://github.com/leo-arch/pacfree"
 
 ### EXIT CODES ###
 
@@ -40,262 +51,391 @@ function echoerr ()
 	echo -e "$@" >&2
 }
 
-function help
+function help ()
 {
 	arg="$1"
 	case $arg in
 		help)
+
+			if [[ $PACMAN != "pacman" ]]; then
+				/usr/bin/"$PACMAN" -h
+				echo "	${ME,,} {-f --check-free}
+	${ME,,} {-l --list-rules}
+	${ME,,} {-a --add-rule}	  <rule(s)>
+	${ME,,} {-L --add-libre}"
+			fi
+
 			echo -e "${ME}, the free-software aware pacman\nusage:  \
-$ME <operation> [...]
+${ME,,} <operation> [...]
 operations:
-	$ME {-h --help}
-	$ME {-V --version}
-	$ME {-D --database}  <options> <package(s)>
-	$ME {-F --files}     [options] [package(s)]
-	$ME {-Q --query}     [options] [package(s)]
-	$ME {-R --remove}    [options] <package(s)>
-	$ME {-S --sync}      [options] [package(s)]
-	$ME {-T --deptest}   [options] [package(s)]
-	$ME {-U --upgrade}   [options] <file(s)>
-	$ME {-f --checkfree}
-	$ME {-L --add-libre}
+	${ME,,} {-h --help}
+	${ME,,} {-V --version}
+	${ME,,} {-D --database}   <options> <package(s)>
+	${ME,,} {-F --files}      [options] [package(s)]
+	${ME,,} {-Q --query}      [options] [package(s)]
+	${ME,,} {-R --remove}     [options] <package(s)>
+	${ME,,} {-S --sync}       [options] [package(s)]
+	${ME,,} {-T --deptest}    [options] [package(s)]
+	${ME,,} {-U --upgrade}    [options] <file(s)>
+	${ME,,} {-f --check-free}
+	${ME,,} {-l --list-rules}
+	${ME,,} {-a --add-rule}	  <rule(s)>
+	${ME,,} {-L --add-libre}
 
-use '$ME {-h --help}' with an operation for available options"
+use '${ME,,} {-h --help}' with an operation for available options"
 		;;
 
-		"checkfree")
+		checkfree)
 			echo -e "List all non-free installed packages\nusage: \
-$ME {-f --checkfree}"
+${ME,,} {-f --check-free}"
 		;;
 
-		"addlibre")
-			echo -e "Add and enable the [libre] repository to pacman \
-database\nusage: $ME {-L --add-libre}"
+		addlibre)
+			echo -e "Add and enable Parabola's libre repositories to \
+pacman database\nusage: ${ME,,} {-L --add-libre}"
 		;;
+
+		addrules)
+			echo -e "Add new rules to the rules list \
+\nusage: ${ME,,} {-a --add-rule} rule(s)"
+		;;
+
+		listrules)
+			echo -e "List currently enabled rules \
+\nusage: ${ME,,} {-l --list-rules}"
+		;;
+
 	esac
 }
 
-function checkfree ()
+function check_sys_free ()
 {
 	if [[ $(type -P /usr/bin/isfree) ]]; then
-		/usr/bin/isfree -cna
+		if [[ $full_blacklist -eq 0 ]]; then
+			if [[ $color_ok -eq 1 ]]; then
+				/usr/bin/isfree -cna || exit $EXIT_FAILURE
+			else
+				/usr/bin/isfree -na || exit $EXIT_FAILURE
+			fi
+		else
+			if [[ $color_ok -eq 1 ]]; then
+				/usr/bin/isfree -ctna || exit $EXIT_FAILURE
+			else
+				/usr/bin/isfree -tna || exit $EXIT_FAILURE
+			fi
+		fi
 
 	else
 		nonfree=0
 		for i in $(/usr/bin/pacman -Qq); do
 
-			# Make sure the pkg does not come from [libre]
+			# Make sure pkg does not come from Parabola repos
 			if [[ $(/usr/bin/ls /var/cache/pacman/pkg/"$i"* 2>/dev/null\
 			| /usr/bin/grep '.*.par[0-9].*\|.*.parabola[0-9].*\|.*_gnu-[0-9].*') ]]; then
 				continue
 			fi
 
+			export GREP_COLORS="mt=1;31"
 			if /usr/bin/grep --color=always "^${i}:" \
 			"$blacklist_file"; then
-				nonfree=1
+				(( nonfree++ ))
+			else
+				export GREP_COLORS="mt=1;36"
+				# Check the AUR blacklist as well
+				if /usr/bin/grep --color=always "^${i}:" \
+				"$blacklist_file_aur"; then
+					(( nonfree++ ))
+				fi
 			fi
 		done
 
+		unset GREP_COLORS
+
 		if [[ nonfree -eq 0 ]]; then
-			echo "No non-free packages found. RMS smiles!"
+			echo -e "${green}[+]$nc No non-free/libre package found. RMS smiles!"
+		else
+			echo -e "${red}[-]$nc $nonfree non-free/libre packages found"
 		fi
+
+		echo -e "${bold}NOTE${nc}: Packages highlighted in cyan come from the AUR"
 	fi
 }
 
-function addlibre ()
+function add_libre_repos ()
 {
-	if [[ $(/usr/bin/pacman -Sl libre 2>/dev/null) ]]; then
-		echo "$ME: The [libre] repository is already enabled. Nothing to do"
-		exit $EXIT_SUCCESS
+	missing_repo=0
+	libre_repos=()
+
+	for x in libre libre-multilib pcr kernels cross nonprism; do
+		if [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
+			echo -e "${green}[+]$nc The [${x}] repository is already \
+enabled"
+		else
+			answer="."
+
+			while [[ $answer != "Y" && $answer != "y" \
+			&& $answer != "N" && $answer != "n" && $answer != "" ]]; do
+				read -rp " Add [${x}]? [y/N] " answer
+			done
+
+			case $answer in
+				y|Y)
+					(( missing_repo++ ))
+					libre_repos[${#libre_repos[*]}]="$x"
+				;;
+				""|n|N) continue ;;
+			esac
+		fi
+	done
+
+	if [[ $missing_repo -eq 0 ]]; then
+		echo "No repository will be enabled"
+		return
 	fi
+
+	echo -e "The following repositories will be added:
+${libre_repos[*]}"
 
 	/usr/bin/sudo /usr/bin/true
 
 	keyring_url="https://www.parabola.nu/packages/libre/x86_64/parabola-keyring/download"
 	mirrorlist_url="https://mirror.fsf.org/parabola/mirrorlist.txt"
 
-	RFSL_OK=0
-	if [[ $(/usr/bin/grep "^RemoteFileSigLevel = Never$" /etc/pacman.conf) ]]; then
-		RFSL_OK=1
+	if ! [[ $(/usr/bin/pacman -Q parabola-keyring) ]]; then
+		RFSL_OK=0
+		if [[ $(/usr/bin/grep "^RemoteFileSigLevel = Never$" /etc/pacman.conf) ]]; then
+			RFSL_OK=1
+		fi
+
+		if [[ RFSL_OK -eq 0 ]]; then
+			echo -e "${blue}::$nc$bold Setting RemoteFileSigLevel to Never...$nc "
+			/usr/bin/sudo /usr/bin/sed -i \
+			'/RemoteFileSigLevel/a RemoteFileSigLevel = Never' \
+			/etc/pacman.conf
+		fi
+
+		echo -e "${blue}::$nc$bold Installing parabola-kerying...$nc "
+		/usr/bin/sudo /usr/bin/pacman -U "$keyring_url"
+
+		if [[ RFSL_OK -eq 0 ]]; then
+			echo -e "${blue}::$nc$bold Reverting changes made to RemoteFileSigLevel...$nc "
+			/usr/bin/sudo /usr/bin/sed -i '/RemoteFileSigLevel = Never/d' \
+			/etc/pacman.conf
+		fi
 	fi
 
-	if [[ RFSL_OK -eq 0 ]]; then
-		echo -e "${blue}::$nc$bold Setting RemoteFileSigLevel to Never...$nc "
-		/usr/bin/sudo /usr/bin/sed -i \
-		'/RemoteFileSigLevel/a RemoteFileSigLevel = Never' \
-		/etc/pacman.conf
+	if ! [[ -f /etc/pacman.d/parabola_mirrorlist ]]; then
+		echo -e "${blue}::$nc$bold Downloading Parabola's mirrorlist...$nc "
+		/usr/bin/sudo /usr/bin/curl -so /etc/pacman.d/parabola_mirrorlist \
+		"$mirrorlist_url"
 	fi
 
-	echo -e "${blue}::$nc$bold Installing parabola-kerying...$nc "
-	/usr/bin/sudo /usr/bin/pacman -U "$keyring_url"
+	for x in ${libre_repos[*]}; do
 
-	if [[ RFSL_OK -eq 0 ]]; then
-		echo -e "${blue}::$nc$bold Reverting changes made to RemoteFileSigLevel...$nc "
-		/usr/bin/sudo /usr/bin/sed -i '/RemoteFileSigLevel = Never/d' \
-		/etc/pacman.conf
-	fi
+		if ! [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
+			echo -e "${blue}::$nc$bold Adding [${x}] repository to /etc/pacman.conf...$nc "
+			echo -e "\n[${x}]\nInclude = /etc/pacman.d/parabola_mirrorlist" \
+			| /usr/bin/sudo /usr/bin/tee -a /etc/pacman.conf 1>/dev/null
+		fi
 
-	echo -e "${blue}::$nc$bold Downloading Parabola's mirrorlist...$nc "
-	/usr/bin/sudo /usr/bin/curl -so /etc/pacman.d/parabola_mirrorlist \
-	"$mirrorlist_url"
-
-	if ! [[ $(/usr/bin/grep "^[libre]$" /etc/pacman.conf) ]]; then
-		echo -e "${blue}::$nc$bold Adding [libre] repository to /etc/pacman.conf...$nc "
-		echo -e "\n[libre]\nInclude = /etc/pacman.d/parabola_mirrorlist" \
-		| /usr/bin/sudo /usr/bin/tee -a /etc/pacman.conf 1>/dev/null
-	fi
+	done
 
 	echo -e "${blue}::$nc$bold Updating pacman database...$nc "
-	/usr/bin/sudo /usr/bin/pacman -Sy
 
-	if [[ $(/usr/bin/pacman -Sl libre 2>/dev/null) ]]; then
-		echo -e "${green}->$nc$bold Successfully added [libre] repository$nc"
-	else
-		echoerr -e "${red}->$nc$bold Could not add [libre] repository$nc"
-		exit $EXIT_FAILURE
-	fi
+	/usr/bin/sudo /usr/bin/pacman -Sy
 }
 
-function download_bl ()
+function download_blacklist ()
 {
+	blacklist_source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
+	blacklist_file="/tmp/${ME,,}_bl"
+
+	# If full blacklist is enabled and the current blacklist file is
+	#+ not full, delete it
+	if [[ $full_blacklist -eq 1 ]]; then
+		if [[ -f $blacklist_file ]]; then
+			if ! [[ $(/usr/bin/grep "^pacman:" "$blacklist_file") ]]; then
+				/usr/bin/rm "$blacklist_file"
+			fi
+		fi
+
+	# If full blacklist is not enabled and the current blacklist file
+	#+ is the full version, delete it
+	else
+		if [[ -f $blacklist_file ]]; then
+			if [[ $(/usr/bin/grep "^pacman:" "$blacklist_file") ]]; then
+				/usr/bin/rm "$blacklist_file"
+			fi
+		fi
+	fi
+
 	if ! [[ -f $blacklist_file ]]; then
-		echo -ne "${green}==> ${white}Downloading packages blacklist... $nc"
+
+		echo -ne "${blue}::$nc$bold Downloading packages blacklist... $nc"
+
 		[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
 
-		if /usr/bin/curl -s "$source" | /usr/bin/sed 's/  //g' \
+		if /usr/bin/curl -s "$blacklist_source" \
+		| /usr/bin/sed 's/  //g' \
 		| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
 		&> /dev/null; then
 			echo -e "${green}OK$nc"
-		# Parse the blacklist to remove technical and branding nonfree
-		#+ packs
+
+			if [[ $full_blacklist -eq 0 ]]; then
+
+				# Parse the blacklist to remove technical and branding
+				#+ nonfree packs
+				/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
+				/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
+				&>/dev/null
+
+				/usr/bin/rm /tmp/blacklist_full 2>/dev/null
+			else
+				/usr/bin/sudo -u "$user" /usr/bin/cp \
+				/tmp/blacklist_full "$blacklist_file"
+
+				/usr/bin/rm /tmp/blacklist_full 2>/dev/null
+			fi
+		else
+			echoerr "\n${red}[-]$nc Error: try again"
+			exit $EXIT_FAILURE
+		fi
+	fi
+}
+
+function download_blacklist_aur ()
+{
+	blacklist_source_aur="https://git.parabola.nu/blacklist.git/plain/aur-blacklist.txt"
+	blacklist_file_aur="/tmp/${ME,,}_bl_aur"
+
+	if ! [[ -f $blacklist_file_aur ]]; then
+
+		echo -ne "${blue}::$nc$bold Downloading packages blacklist (AUR)... $nc"
+
+		[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
+
+		if /usr/bin/curl -s "$blacklist_source_aur" \
+		| /usr/bin/sed 's/  //g' \
+		| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full_aur \
+		&> /dev/null; then
+
 			echo -e "${green}OK$nc"
-			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
-			/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
-			&>/dev/null
-			/usr/bin/rm /tmp/blacklist_full
 
+			/usr/bin/sudo -u "$user" /usr/bin/cp \
+			/tmp/blacklist_full_aur "$blacklist_file_aur"
+
+			/usr/bin/rm /tmp/blacklist_full_aur 2>/dev/null
 		else
-			echoerr "\n${red}Error${nc}: try again"
+			echoerr "\n${red}[-]$nc Error: try again"
 			exit $EXIT_FAILURE
 		fi
 	fi
 }
 
-function sys_up () {
+function check_free ()
+{
+	[[ ${#PKGS[*]} -eq 0 ]] && return
 
-	if [[ $(type -P /usr/bin/pacrep) ]]; then
-		if /usr/bin/pacrep -a; then
-			exit $EXIT_SUCCESS
-		else
-			exit $EXIT_FAILURE
-		fi
-	else
-		if /usr/bin/pacman "$1"; then
-			return $EXIT_SUCCESS
-		else
-			return $EXIT_FAILURE
-		fi
-	fi
-}
+	echo -e "${blue}::$nc$bold Checking packages against the blacklist... $nc"
 
-function sys_up_pkg () {
-	# Update and/or upgrade the system
-	if sys_up "$1" -eq 0; then
-		# Rerun the program to check pkgs to be installed
-		p[0]="-S"
-		# Since first argument is "-S", the program will run do_sync()
-		#+ over pkgs to be installed
-		"$0" ${p[*]}
-	fi
-}
-
-function non_sync () {
-	# If nothing is to be installed
-	if /usr/bin/pacman ${p[*]}; then
-		exit $EXIT_SUCCESS
-	else
-		exit $EXIT_FAILURE
-	fi
-}
-
-function do_sync () {
-	OPTS=()
-
-	while [[ ${p[$i]} == "-"* ]]; do
-		OPTS[${#OPTS[*]}]=${p[$i]} # Store options
-		i=$((i+1))
-	done
-	PKGS=( ${p[*]:1} ) # packages == non-option args
-
-	repo=""
-	for arg in "${PKGS[@]}"; do
-
+	for (( i=0;i<${#PKGS[*]};i++ )); do
+		unset repo pkg
 		# If repo/pkg get the two values
-		if [[ $arg == *"/"* ]]; then
-			repo=${arg%%/*}
-			pkg=${arg##*/}
+		if [[ ${PKGS[$i]} == *"/"* ]]; then
+			repo=${PKGS[$i]%%/*}
+			pkg=${PKGS[$i]##*/}
 		else
-			pkg=$arg
+			pkg=${PKGS[$i]}
 		fi
 
-		# If $repo is some of the Parabola's repos, skip the test,
-		#+ since $pkg is supposed to be free
+		# If pkg-version, get pkg name
+		if [[ $pkg == *">"* || $pkg == *"<"* ]]; then
+			case $pkg in
+				*">"*) pkg=$(echo ${pkg%%>*}) ;;
+				*"<"*) pkg=$(echo ${pkg%%<*}) ;;
+			esac
+		fi
+
 		if [[ -n $repo ]]; then
 			case $repo in
 
+				# If $repo is some of the Parabola's repos, skip the
+				#+ test, since $pkg is supposed to be free
 				'libre'|'libre-multilib'|'kernels'|'pcr'|'cross'\
 				|'nonprism'|'libre-testing'|'libre-multilib-testing'\
 				|'pcr-testing'|'nonprism-testing')
-					INSTALL_PKGS[${#INSTALL_PKGS[*]}]="${repo}/$pkg"
 					continue
 				;;
 
-				# If not in Parabola's repo, check it against the
+				# If not in Parabola's repos, check it against the
 				#+ blacklist
 				*) ;;
 			esac
 		fi
 
 		# Check if $pkg is blacklisted
-		blacklisted="$(/usr/bin/grep "^${pkg}:" $blacklist_file)"
-		if [[ $blacklisted ]]; then
+		blacklisted="$(/usr/bin/grep "^${pkg}:" "$blacklist_file" \
+		2>/dev/null)"
+
+		# If using something like yay or trizen, we need to check the
+		#+ AUR blacklist as well
+		if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
+			if [[ -z $blacklisted ]]; then
+				blacklisted="$(/usr/bin/grep "^${pkg}:" \
+				"$blacklist_file_aur" 2>/dev/null)"
+			fi
+		fi
+
+		if [[ -n $blacklisted ]]; then
+
 			# If blacklisted, get alternative pkg
 			alternative="$(echo $blacklisted | /usr/bin/cut -d":" -f2)"
-			echo -e "$nc$bold'$pkg'$nc is a non-free package\
+			echo -e "$nc$bold'$pkg'$nc is a ${red}non-free$nc package\
 \n$nc${bold}Description${nc}: $blacklisted\
 \n$nc${bold}Alternative package${nc}: $([[ $alternative ]] && echo "$alternative" \
 	|| echo "none")"
+
 			answer="."
 			valid_answers=( "y" "Y" "n" "N" )
-			msg=$(echo -e "${blue}:: ${white}Do you want to install '${arg}' anyway? [y/N] $nc")
+			msg=$(echo -e "${blue}::$nc$bold Do you want to install '${PKGS[$i]}' anyway? [y/N]$nc ")
+
 			while [[ ! " ${valid_answers[*]} " =~ " ${answer} " \
 			&& $answer != "" ]]; do
 				read -rp "$msg" answer
 			done
+
 			case $answer in
-				""|n|N) continue;;
-				y|Y) INSTALL_PKGS[${#INSTALL_PKGS[*]}]=$pkg ;;
+
+				""|n|N) unset PKGS[$i] ;;
+
+				y|Y) ;;
 			esac
-		else # If free-software, just save the pkg to be installed
-			INSTALL_PKGS[${#INSTALL_PKGS[*]}]=$pkg
+
 		fi
 	done
 
-	# If there are pkgs to install, fire up the pac-man
-	if [[ ${#INSTALL_PKGS[@]} -gt 0 ]]; then
-		if [[ $(type -P /usr/bin/pacrep) ]]; then
-			if ! /usr/bin/pacrep -s "${INSTALL_PKGS[@]}"; then
-				exit $EXIT_FAILURE
-			fi
-		else
-			if ! /usr/bin/pacman "${OPTS[*]}" "${INSTALL_PKGS[*]}"; then
-				exit $EXIT_FAILURE
-			fi
-		fi
+	# If no pkg left after this check, just exit
+	[[ ${#PKGS[*]} -eq 0 ]] && exit $EXIT_SUCCESS
+
+	# If no blacklisted package, $blacklisted will be emtpy
+	if [[ -z $blacklisted ]]; then
+		echo -e "${green} ->$nc No blacklisted packages found"
 	fi
 }
 
-function main ()
+function list_rules ()
+{
+	rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
+	if [[ ${#rules[*]} -gt 0 ]]; then
+		for rule in ${rules[*]}; do
+			echo "$rule"
+		done | /usr/bin/column
+	else
+		echo "No rules defined"
+	fi
+}
+
+function check_added_functions ()
 {
 	case "$2" in
 
@@ -303,11 +443,15 @@ function main ()
 		-h|--help)
 			case "$1" in
 
-				-f|--checkfree) help "checkfree" ;;
+				-f|--check-free) help "checkfree" ;;
 
 				-L|--add-libre) help "addlibre" ;;
 
-				*) /usr/bin/pacman "$1" --help ;;
+				-a|--add-rules) help "addrules" ;;
+
+				-l|--list-rules) help "listrules" ;;
+
+				*) /usr/bin/"$PACMAN" "$1" --help ;;
 			esac
 
 			exit $EXIT_SUCCESS ;;
@@ -316,56 +460,483 @@ function main ()
 	case "$1" in
 
 		# Modified version of pacman help (B)
-		''|-h|--help)
+		""|-h|--help)
 			help "help"
-			exit $EXIT_SUCCESS ;;
+			exit $EXIT_SUCCESS
+		;;
 
 		-V|--version)
-			printf "%-23s$ME v%s (%s, by %s)" "" "$VERSION" "$DATE" \
-			"$AUTHOR"
-			/usr/bin/pacman --version
-			exit $EXIT_SUCCESS ;;
+			printf "%-23s$ME v%s (%s, by %s)\n%-23sLicense: %s\n%-23sWebsite: %s\n" "" "$VERSION" "$DATE" "$AUTHOR" "" "$LICENSE" "" "$WEBSITE"
+			/usr/bin/"$PACMAN" --version || exit $EXIT_FAILURE
+			exit $EXIT_SUCCESS
+		;;
 
 		# Added functions
-		-f|--checkfree)
-			checkfree
+		-f|--check-free)
+			download_blacklist
+			download_blacklist_aur
+			check_sys_free
+			exit $EXIT_SUCCESS
+		;;
+
+		-l|--list-rules)
+			list_rules
+			exit $EXIT_SUCCESS
+		;;
+
+		-a|--add-rules)
+			shift
+			rules=( $@ )
+			add_rules ${rules[*]}
 			exit $EXIT_SUCCESS
 		;;
 
 		-L|--add-libre)
-			addlibre
+			add_libre_repos
 			exit $EXIT_SUCCESS
 		;;
 	esac
+}
 
-	# Download the blacklist, if it doesn't exist
-	download_bl
+function add_rules ()
+{
+	for rule in $@; do
+		unset repo
+		if [[ $rule == *"/"* ]]; then
 
-	p=( $@ )
+			repo=${rule%%/*}
 
-	# This case statement covers only the most common cases of software
-	#+ installation. For more complex cases like when setting a new
-	#+ database or a new root location (even when using some simple
-	#+ combination like -Sq or -Sv), simply use /usr/bin/pacman after
-	#+ making sure that whatever you want to install is free. Take a
-	#+ look at my "isfree" script: https://github.com/leo-arch/isfree
-
-	case ${p[*]} in
-
-		-Syu|-Suy|-Su)
-			if sys_up ${p[0]} -eq 0; then
-				exit $EXIT_SUCCESS
-			else
-				exit $EXIT_FAILURE
+			if ! [[ $(/usr/bin/pacman-conf -r "$repo" \
+			2>/dev/null) ]]; then
+				echoerr "${red}[-]$nc ${repo}: Repository not found"
+				continue
 			fi
-		;;
+		else
+			echoerr "${red}[-]$nc ${rule}: A repository must be specified"
+			continue
+		fi
 
-		"-Syu "*|"-Suy"*|"-Sy "*|"-Su "*) sys_up_pkg ${p[0]} ;;
+		if ! [[ $(/usr/bin/grep "$rule" "$RULES_FILE")  ]]; then
+			echo "$rule" >> "$RULES_FILE"
+			echo -e "${green}[+]$nc ${rule}: New rule successfully added"
+		else
+			echoerr "${red}[-]$nc ${rule}: Rule already exists"
+			continue
+		fi
+	done
+}
 
-		"-S "*|"--sync "*) do_sync ;;
+function parse_arguments ()
+{
+	sync_index=-1
+	after_sync=-1
 
-		*) non_sync ;;
+	# Get sync argument index and value
+	for (( i=0;i<${#p[*]};i++ )); do
+
+		if [[ ${p[$i]} == "-S"* || ${p[$i]} == "--sync" ]]; then
+			sync_value=${p[$i]}
+			sync_index=$i
+
+		# If not supported function, warn and exit
+		elif [[ ${p[$i]} == "--ignore"* \
+		|| ${p[$i]} == "--ignoregroup" ]]; then
+			echoerr "${ME,,}: The --ignore and --ignoregroup directives \
+are not supported. You still can use pacman configuration file instead."
+			exit $EXIT_ERROR
+		fi
+
+	done
+
+	if [[ -z $sync_value ]]; then
+		no_install=1
+
+	# Check non-install SHORT suboptions (c,g,h,i,l,s,w,p) for --sync .
+	# None of these sync suboptions are intended for software
+	#+ installation. So, if some of them is found in the sync string,
+	#+ set $no_install to 1, so that check_free() and check_rules(),
+	#+ only valid for package installation, won't be executed.
+	#+ Drawback: This might break things if $PACMAN is not pacman or
+	#+ powerpill.
+	elif [[ $sync_value == "-S"* && $(echo "$sync_value" \
+	| /usr/bin/grep "[c,g,h,i,l,s,w,p]")  ]]; then
+		no_install=1
+	fi
+
+	# Whatever is a valid package name goes to PKGS. Everything else
+	#+ goes to OPTS 
+	for (( i=0;i<${#p[*]};i++ )); do
+
+		[[ $i -eq $sync_index ]] && continue
+
+		# Check non-install LONG suboptions for --sync.
+		if [[ -n $sync_value ]]; then
+			case ${p[$i]} in
+				--print|--clean|--groups|--info|--list|--search\
+				|--downloadonly|--help) no_install=1 ;;
+			esac
+		fi
+
+		if [[ ${p[$i]} == "-"* ]]; then
+			OPTS[${#OPTS[*]}]=${p[$i]}
+		else
+			if valid_pkg_name "${p[$i]}" -eq 0; then
+				PKGS[${#PKGS[*]}]=${p[$i]}
+			else
+				OPTS[${#OPTS[*]}]=${p[$i]}
+			fi
+		fi
+
+	done
+}
+
+function check_rules ()
+{
+	[[ ${#PKGS[*]} -eq 0 ]] && return
+
+	### LOAD REPO RULES ###
+
+	rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
+
+	echo -e "${blue}::$nc$bold Checking packages against rules...$nc "
+
+	if [[ ${#rules[*]} -eq 0 ]]; then
+		echo -e "$yellow ->$nc No rules defined"
+		return
+	fi
+
+	RULED_PKGS=()
+
+	### CHECK PKGS AGAINST RULES ###
+
+	for (( i=0;i<${#PKGS[*]};i++ )); do
+
+		unset pkg_name pkg_version
+
+		# If repo was already specified in command line (repo/pkg),
+		#+ skip the rules test
+		if [[ ${PKGS[$i]} == *"/"* ]]; then
+			continue
+		fi
+
+		pkg_name=${PKGS[$i]}
+
+		# Check pkg version
+		if [[ ${PKGS[$i]} == *"<"* || ${PKGS[$i]} == *">"* ]]; then
+			case ${PKGS[$i]} in
+				*"<"*)
+					pkg_name=$(echo ${PKGS[$i]%%<*})
+					pkg_version=$(echo "<${PKGS[$i]##*<}")
+				;;
+				*">"*)
+					pkg_name=$(echo ${PKGS[$i]%%>*})
+					pkg_version=$(echo ">${PKGS[$i]##*>}")
+				;;
+			esac
+		fi
+
+		for (( j=0;j<${#rules[*]};j++ )); do
+			if [[ $pkg_name == ${rules[$j]##*/} ]]; then
+
+				if [[ -n $pkg_version ]]; then
+					PKGS[$i]=$(echo "${rules[$j]}$pkg_version")
+					RULED_PKGS[${#RULED_PKGS[*]}]=$(echo "${rules[$j]}$pkg_version")
+				else
+					PKGS[$i]=${rules[$j]}
+					RULED_PKGS[${#RULED_PKGS[*]}]=${rules[$j]}
+				fi
+
+				break
+			fi
+		done
+	done
+
+	if [[ ${#RULED_PKGS[*]} -gt 0 ]]; then
+		echo -e "${green} ->$nc Ruled packages found:"
+		for (( i=0;i<${#RULED_PKGS[*]};i++ )); do
+			echo " $((i+1))) ${RULED_PKGS[$i]}"
+		done
+	else
+		echo -e "${green} ->$nc No ruled packages found"
+	fi
+}
+
+function check_updates ()
+{
+	if [[ $sync_value != "-S"* || $sync_value != *'u'* ]]; then
+		# If not -Su, at least, do nothing
+		return
+	fi
+
+	# Get available upgrades (update the database)
+	/usr/bin/pacman -Sy || exit $EXIT_FAILURE
+
+	# Remove 'y' and 'u' from sync options
+	tmp=$(echo ${sync_value//[y,u]})
+	sync_value=$tmp
+
+	# Get pkgs to be upgraded
+	ups=( $(/usr/bin/pacman -Qu | /usr/bin/grep -v \
+	"\[ignored\]" | /usr/bin/awk '{print $1}') )
+
+	# If no upgrades and no packages to be installed, exit
+	if [[ ${#ups[*]} -eq 0 ]]; then
+		if [[ ${#PKGS[*]} -eq 0 ]]; then
+			echo -e "${green}[+]$nc There is nothing to do"
+			exit $EXIT_SUCCESS
+		else
+			return
+		fi
+	fi
+
+	# At this point, $ups[] is always greater than zero: we have
+	#+ upgrades
+
+	# If only upgrading (no PKGS), set the only_upgrade flag to 1, 
+	#+ so that check_free() won't be executed
+	[[ ${#PKGS[*]} -eq 0 ]] && only_upgrade=1
+
+	# Append packages to be upgraded to the PKGS array
+	for up in ${ups[*]}; do
+		PKGS[${#PKGS[*]}]=$up
+	done
+
+	# List upgrades
+	echo -e "\n${blue}::$nc$bold Available upgrades:$nc "
+		/usr/bin/pacman -Qu || exit $EXIT_FAILURE
+}
+
+function check_config ()
+{
+	# If pacman is not found, this program is useless
+	if ! [[ $(type -P /usr/bin/pacman) ]]; then
+		echoerr "/usr/bin/pacman: Command not found"
+		exit $EXIT_ERROR
+	fi
+	
+	### GENERATE CONFIG FILES AND DIRECTORIES ###
+
+	[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
+
+	if [[ $user == "root" ]]; then
+		CONFIG_DIR="/root/.config/${ME,,}"
+	else
+		CONFIG_DIR="/home/$user/.config/${ME,,}"
+	fi
+
+	CONFIG_FILE="$CONFIG_DIR/${ME,,}.conf"
+
+	RULES_FILE="$CONFIG_DIR/rules.conf"
+
+	if ! [[ -d $CONFIG_DIR ]]; then
+		/usr/bin/mkdir -p "$CONFIG_DIR" || exit $EXIT_FAILURE
+	fi
+
+	if ! [[ -f $CONFIG_FILE ]]; then
+		echo -e "# $ME configuration file
+
+# If set to false, remove packages with trademarking and merely
+# technical issues from the blacklist
+full_blacklist=false
+
+# Define you package manager, say pacman or powerpill or yay
+pac_man=pacman
+
+# Colorize output
+color=true
+
+# Enable or disable $ME checks for packages. Though disabling both
+# check would make $ME useless, it might be usefull in some cases
+check_rules=true
+check_free=true
+" > "$CONFIG_FILE"
+	fi
+
+	! [[ -f $RULES_FILE ]] && echo "# Repository rules for $ME
+
+# Add here repository rules for packages, one per line, in the
+# form 'repo/pkg' (blank and commented lines are ommited). Packages
+# listed here will always be installed/upgraded from the specified
+# repository (disregarding its place in pacman config file).
+# Example:
+# core/filesystem
+# libre/licenses
+" > "$RULES_FILE"
+
+	### READ THE CONFIG FILE ###
+
+	full_blacklist=$(/usr/bin/grep "^full_blacklist=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)
+
+	case $full_blacklist in
+		true) full_blacklist=1 ;;
+		false) full_blacklist=0 ;;
+		*) full_blacklist=0 ;;
 	esac
+
+	PACMAN=$(/usr/bin/grep "^pac_man=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)
+
+	if [[ -z $PACMAN ]]; then
+		PACMAN="pacman"
+	elif ! [[ $(type -P /usr/bin/"$PACMAN") ]]; then
+		echoerr	"${red}[-]$nc ${PACMAN}: Command not found"
+		exit $EXIT_FAILURE
+	fi
+	
+	
+
+	color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)
+
+	case $color in
+		true) color_ok=1 ;;
+		false) color_ok=0 ;;
+		*) color_ok=1 ;;
+	esac
+
+	if [[ $color_ok -eq 0 ]]; then
+		#white=""
+		yellow=""
+		green=""
+		red=""
+		blue=""
+		bold=""
+		nc=""
+	fi
+
+	rules_value=$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)
+
+	case $rules_value in
+		true) rules_ok=1 ;;
+		false) rules_ok=0 ;;
+		*) rules_ok=1 ;;
+	esac
+
+	free_value=$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)
+
+	case $free_value in
+		true) free_ok=1 ;;
+		false) free_ok=0 ;;
+		*) free_ok=1 ;;
+	esac
+}
+
+function valid_pkg_name ()
+{
+# From the Wiki:
+# Package names can contain only alphanumeric characters and any
+#+ of @ . _ + -
+#+ Names are not allowed to start with hyphens or dots. All letters
+#+ should be lowercase.
+
+	pkg_name="$1"
+
+	# Exclude strings only valid for --color and --architecture options
+	case $pkg_name in
+		auto|i[0-6]86|pentium4|x86_64|any|always|never)
+			return $EXIT_FAILURE
+		;;
+	esac
+
+	# If pkg_name starts with hyphen or dot, it's not a package
+	if [[ $(echo "$pkg_name" | /usr/bin/grep ^[.-]) ]]; then
+		return $EXIT_FAILURE
+	fi
+
+	# If $pkg_name contains a slash and is an existing filename,
+	#+ it's not a package
+	if [[ ($pkname == *"/"* || $pkg_name == "/"* || $pkg_name == *"/") \
+	&& -e $pkg_name ]]; then
+		return $EXIT_FAILURE
+	fi
+
+	# Include < and > to allow package versions. Ex: "pacman>5.0"
+	if [[ $pkg_name == *"<"* || $pkg_name == *">"* ]]; then
+		return $EXIT_SUCCESS
+	fi
+
+	# Exclude valid pkg name chars from pkg_name. If something remains,
+	#+ It's not package
+	if [[ $(echo "$pkg_name" \
+	| /usr/bin/sed 's/[a-z0-9]\|[,@+-./]//g') ]]; then
+		return $EXIT_FAILURE
+
+	else
+		# I included slash to allow repo/pkg expressions, but slash
+		# could be neither the first nor the last char in $pkg_name
+		if [[ $pkg_name == "/"* || $pkg_name == *"/" ]]; then
+			return $EXIT_FAILURE
+		else
+			return $EXIT_SUCCESS
+		fi
+	fi
+}
+
+function main ()
+{
+	p=( $@ ) # Command line arguments
+	PKGS=() # List of packages to operate on
+	OPTS=() # Everything that is not a package (except the sync string)
+	sync_value="" # Sync string. Ex: -Syu
+	# Should we install/upgrade some package? If not, check_free()
+	#+ and check_rules() won't be executed
+	no_install=0
+	only_upgrade=0 # If only upgrading, we should not run check_free()
+
+	## Config file options ##
+	# Should we use the complete blacklist or a
+	#+ trimmed down version without packages marked as non-free
+	#+ merely because of trademarking and technical issues?
+	full_blacklist=0
+	color_ok=1
+	rules_ok=1 # Should we perform the rules check?
+	free_ok=1 # Should we perform the free package check?
+
+	check_config
+
+	### Check for added functions: repo rules stuff, modified help,
+	#+ and libre repositories ###
+	check_added_functions ${p[*]}
+
+	### DOWNLOAD THE BLACKLIST(S) ###
+	download_blacklist
+	# If using something like yay or trizen, we need the AUR
+	#+ blacklist as well
+	if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
+		download_blacklist_aur
+	fi
+
+	### GET OPTIONS, SYNC VALUE, AND PKGS TO BE INSTALLED
+	#+ FROM INPUT ###
+	# Pkgs to be installed are added to PKGS
+	parse_arguments
+
+	### CHECK FOR UPDATES ###
+	# Add pkgs to be upgraded, if any, to PKGS
+	check_updates
+
+	# $no_install was set above, in parse_arguments()
+	# $no_install includes both upgrades and new packages
+	if [[ $no_install -eq 0 ]]; then
+		### CHECK PKGS AGAINST REPO RULES ###
+		# If some rule is found for a package, the package name in
+		#+ PKGS is replaced by the rule (repo/pkg)
+		[[ $rules_ok -eq 1 ]] && check_rules
+
+		### CHECK PACKAGES AGAINST THE BLACKLIST ###
+		# Non-free/allowed pkgs are removed from PKGS
+		[[ $free_ok -eq 1 && $only_upgrade -eq 0 ]] && check_free
+	fi
+
+	### FIRE UP THE PACMAN ###
+	if ! /usr/bin/"$PACMAN" ${OPTS[*]} $sync_value ${PKGS[*]}; then
+		exit $EXIT_FAILURE
+	fi
+
+#	echo "/usr/bin/$PACMAN ${OPTS[*]} $sync_value ${PKGS[*]}"
 }
 
 ### MAIN ###

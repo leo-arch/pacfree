@@ -1,14 +1,14 @@
 # Maintainer: archcrack <johndoe.arch@outlook.com>
 
 pkgname=pacfree
-pkgver=0.3.3
+pkgver=0.4.1
 pkgrel=1
 pkgdesc="Make pacman free-software aware"
 arch=(any)
 url="https://github.com/leo-arch/pacfree"
 license=(GPL2)
-depends=('bash' 'pacman' 'coreutils' 'curl' 'grep' 'sed')
-optdepends=('isfree: Check your system for non-free software' 'pacrep: Choose repositories on a per package basis')
+depends=('bash' 'pacman' 'coreutils' 'curl' 'grep' 'sed' 'util-linux' 'gawk')
+optdepends=('isfree: Check your system for non-free software')
 makedepends=('git')
 source=("git+${url}.git")
 sha256sums=('SKIP')
