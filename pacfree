@@ -1142,7 +1142,7 @@ function main ()
 	fi
 
 	### FIRE UP THE PACMAN ###
-	if ! /usr/bin/"$PACMAN" "$pacman_color" ${OPTS[*]} "$sync_value" \
+	if ! /usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
 	${PKGS[*]}; then
 		exit $EXIT_FAILURE
 	fi
