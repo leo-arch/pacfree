@@ -4,17 +4,17 @@
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
-#  
+#
 
 ### DESCRIPTION ###
 
@@ -189,9 +189,9 @@ function check_sys_free ()
 		local nonfree=0
 		local aur=0
 		local colorize="--color=always"
-		
+
 		[[ $color_ok -eq 0 ]] && colorize="--color=never"
-		
+
 		for i in $(/usr/bin/pacman -Qq); do
 
 			# Make sure pkg does not come from Parabola repos
@@ -210,7 +210,7 @@ function check_sys_free ()
 				if /usr/bin/grep "$colorize" "^${i}:" \
 				"$blacklist_file_aur"; then
 					(( nonfree++ ))
-					aur=1				
+					aur=1
 				fi
 			fi
 		done
@@ -589,9 +589,9 @@ function list_repos ()
 	if [[ -n "$1" ]]; then
 		for i in "$@"; do
 			if [[ $(/usr/bin/grep "^\[${i}\]" /etc/pacman.conf) ]]; then
-				echo -e "${green}[+]$nc [${i}]: Found" 
+				echo -e "${green}[+]$nc [${i}]: Found"
 			else
-				echo -e "${red}[-]$nc [${i}]: Not found" 
+				echo -e "${red}[-]$nc [${i}]: Not found"
 			fi
 		done
 	else
@@ -640,7 +640,7 @@ function print_logs ()
 	else
 		local args=( "$@" )
 		local pkgs=""
-		# Transform "pkg1 pkg2 pkg3" into this string 
+		# Transform "pkg1 pkg2 pkg3" into this string
 		#+ "pkg1\|pkg2\|pkg3" to be used by grep
 		pkgs="$(echo "${args[*]}" | /usr/bin/sed 's/ /\\|/g')"
 
@@ -688,7 +688,7 @@ function parse_arguments ()
 			;;
 
 			list-updates)
-				if [[ $(type -P /usr/bin/checkupdatess) ]]; then
+				if [[ $(type -P /usr/bin/checkupdates) ]]; then
 
 					echo -e "${blue}::$nc$bold Checking available upgrades... $nc"
 					/usr/bin/checkupdates || exit $EXIT_FAILURE
@@ -858,7 +858,7 @@ function check_updates ()
 		return
 	fi
 
-	# Get available upgrades (update the database)	
+	# Get available upgrades (update the database)
 	/usr/bin/pacman "$pacman_color" -Sy || exit $EXIT_FAILURE
 
 
