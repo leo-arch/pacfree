@@ -53,9 +53,17 @@ nc="\033[0m"
 ME="PacFree"
 VERSION="0.4.2"
 AUTHOR="L. Abramovich"
-DATE="Dec, 2020"
+DATE="Dec 31, 2020"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
+
+### BLACKLISTS ###
+
+blacklist_source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
+blacklist_file="/tmp/pkgs_blacklist"
+
+blacklist_source_aur="https://git.parabola.nu/blacklist.git/plain/aur-blacklist.txt"
+blacklist_file_aur="/tmp/pkgs_blacklist_aur"
 
 ### EXIT CODES ###
 
@@ -125,7 +133,7 @@ provided in parentheses and is always the recommended way to go):
   list-installed-foreign (-Qem)
   list-installed-deps (-Qd)
   list-updates (sudo pacman -Sy && pacman -Qu)
-  list-repos (-r, grep \"^\[.*\]\" /etc/pacman.conf | grep -v options)
+  list-repos ('pacfree -r' or 'pacman-conf -l' )
   info (-Qi)
   info-remote (-Si)
   list-files (-Ql)
@@ -309,9 +317,6 @@ enabled"
 
 function download_blacklist ()
 {
-	local blacklist_source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
-	local blacklist_file="/tmp/pkgs_blacklist"
-
 	# If full blacklist is enabled and the current blacklist file is
 	#+ not full, delete it
 	if [[ $full_blacklist -eq 1 ]]; then
@@ -367,9 +372,6 @@ function download_blacklist ()
 
 function download_blacklist_aur ()
 {
-	local blacklist_source_aur="https://git.parabola.nu/blacklist.git/plain/aur-blacklist.txt"
-	local blacklist_file_aur="/tmp/pkgs_blacklist_aur"
-
 	if [[ -f $blacklist_file_aur ]]; then
 		return
 	fi
@@ -442,8 +444,9 @@ function check_free ()
 		blacklisted="$(/usr/bin/grep "^${pkg}:" "$blacklist_file" \
 		2>/dev/null)"
 
-		# If using something like yay or trizen, we need to check the
-		#+ AUR blacklist as well
+		# If using some pac-man able to install packages from the
+		#+ AUR, like yay or trizen, we need to check the AUR
+		#+ blacklist as well
 		if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
 			if [[ -z $blacklisted ]]; then
 				blacklisted="$(/usr/bin/grep "^${pkg}:" \
@@ -493,7 +496,7 @@ function check_free ()
 
 function list_rules ()
 {
-	rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
+	local rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
 	if [[ ${#rules[*]} -gt 0 ]]; then
 		for rule in ${rules[*]}; do
 			echo "$rule"
@@ -1087,8 +1090,10 @@ function main ()
 	#+ trimmed down version without packages marked as non-free
 	#+ merely because of trademarking and technical issues?
 	full_blacklist=0
-	color_ok=1 # Should we colorize output?
+
+	color_ok=1 # We colorize output by default
 	pacman_color="--color=always"
+
 	rules_ok=1 # Should we perform the rules check?
 	free_ok=1 # Should we perform the free package check?
 
@@ -1119,6 +1124,15 @@ function main ()
 		no_install=0
 	fi
 
+	# This block is only for my personal configuration. You can
+	#+ comment it if you like. However, it won't do anything if
+	#+ /tmp/updates doesn't exist. If by chance it exists, this
+	#+ block only writes a zero to it.
+	if [[ $sync_value == "-Syu" && -f /tmp/updates ]]; then
+		echo "0" | /usr/bin/sudo -u "$user" \
+		/usr/bin/tee /tmp/updates &>/dev/null
+	fi
+
 	### CHECK FOR UPDATES ###
 	# Add pkgs to be upgraded, if any, to PKGS
 	check_updates
@@ -1141,13 +1155,15 @@ function main ()
 		[[ $free_ok -eq 1 && $only_upgrade -eq 0 ]] && check_free
 	fi
 
-	### FIRE UP THE PACMAN ###
-	if ! /usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
-	${PKGS[*]}; then
-		exit $EXIT_FAILURE
-	fi
+	echo "$no_install"
 
-#	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value ${PKGS[*]}"
+	### FIRE UP THE PACMAN ###
+#	if ! /usr/bin/"$PACMAN" "$pacman_color" ${OPTS[*]} $sync_value \
+#	${PKGS[*]}; then
+#		exit $EXIT_FAILURE
+#	fi
+
+	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value ${PKGS[*]}"
 }
 
 ### MAIN ###
