@@ -8,10 +8,14 @@
 
 I simply love `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
-What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `-S` option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
+What I offer here is a simple `pacman` wrapper written in Bash and aimed to make `pacman` free-software aware by making use of Parabola's blacklist. The wrapper is very simple: every time the user attempts to install some package via the `--sync` (`-S`) option, the wrapper will check the blacklist looking for the package. If found, that is, if the package is non-free, the user will be warned and asked whether or not she wants to continue. Next, if necessary, `pacman` will be called to do its thing.
 
 This point is absolutely relevant: WARNING the user about proprietary software is one thing, and FORCING the user NOT to install
 proprietary sofware, as Parabola does (via its `your-freedom` package), is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. Someone who is forced to do the right thing would be a good robot, a good machine, but not a good person. This is where Parabola, and all the FSF endorsed distributions as well, is wrong; and this is why I wrote this wrapper: it will warn you about non-free software, but it's up to you what to do about it.
+
+Once `pacfree` knows what is to be installed/upgraded, it checks every package against a rules list (a series of lines in the form "repo/pkg" defined in a rules file, `$HOME/.config/pacfree/rules.conf`), and, if a rule for the package is found, it installs the package from the specified repository (instead of from the first repository defined in `/etc/pacman.conf` providing the package, which is pacman's default behaviour.
+
+The main idea of this functionality is to make `pacman` able to handle packages with the same name in different repositories, for example, "core/licenses" and "libre/licenses" or "extra/nmap" and "blackarch/nmap", without the need to explicitly specify the repository in the command line, besides the important fact that it works for upgrades as well. Just define in the rules file from which repository a certain package is to be installed/upgraded and `pacman` will always install/upgrade the package from the specified repository (disregarding the repositories order in `/etc/pacman.conf`). In this way, we can use packages and repositories coming from different Arch based distributions more easily and smoothly.
 
 Even if you are concerned with free-software, just as I am, you don't need to move away from Arch: it is just too great to be left behind. Instead, you can help to make it even better, more free, and more powerful. This is the reason of this wrapper. Of course, it is far from perfect, but it's better than none.
 
@@ -26,32 +30,18 @@ Navigate to the directory called `pacfree`; you will find here the PKGBUILD file
 	$ makepkg -si
 	$ pacfree -h
 
-To preserve the "pacman" name, you can create a symlink called `/usr/local/bin/pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, the wrapper will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you should specify the complete path: `/usr/bin/pacman`.
+To preserve the "pacman" name, you can create a symlink in `/usr/local/bin` called `pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, `pacfree` will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you should specify the complete path: `/usr/bin/pacman`.
 
-## Pacfree, IsFree, and PacRep
+## PacFree and IsFree
 
-I also added two simple functions to `pacman`: `-f --checkfree`,  to make it able to scan the computer looking for non-free installed packages. However, if `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
+I added two simple options to those originally provided by `pacman`: `-f --checkfree`,  to make it able to scan the computer looking for non-free installed packages. However, if `isfree` (see https://github.com/leo-arch/isfree) is found, it will be used instead of this basic function.
 
 ![checkfree](https://github.com/leo-arch/pacfree/blob/master/screenshots/pacfree-f.png)
 
-The second added function is `-l --add-libre`, which automatically adds and enable the `[libre]` repository to pacman database.
+The second added function is `-L --add-libre`, which lets you add and enable Parabola's libre repositories to pacman database.
 
-Now, you can list the packages contained in the `[libre]` repo:
+** NOTE **: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this has nothing to do with `FOSS`: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre".
 
-	$ pacman -Sl libre
+This is why I removed this kind of blacklisted packages (that is, those based on trademarking and merely technical issues) from Parabola's blacklist, allowing thus only the `[nonfree]`, `[semifree]`, and `[uses-nonfree]` tags.
 
-and DECIDE whether you want to install some of these pacakges. I you so decide, let pacman know which repo contains the package you want to install. Why? Because some packages in the `[libre]` repository have the same name as its non-free version. For example, the free/libre version of midori is named in the `[libre]` repo -just like the non-free version- "midori".
-
-	# pacman -S libre/midori
-
-** NOTE **: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this is completely stupid: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre" (in a horrible magenta color!).
-
-This is why I removed this kind of blacklisted packages (that is, those based on trademarking and merely technical issues) from Parabola's blacklist, allowing thus only the `[nonfree]`, `[semifree]`, and `[uses-nonfree]` tags. 
-
-However, there are still a few drawbacks with the above approach: 1) You need to explicitly tell pacman from which repository to install a package; 2) It does not work for upgrades: if you place the new repository, say `[libre]`, at the bottom of the repositories list in `/etc/pacman.conf`, all packages provided both by `[libre]` and another repository placed on top of it, will always be installed by pacman from the latter, that is, the first repository in the list providing that package, overriding thus our decision to install that package from `[libre]` or another non-offical repository.
-
-To deal with these issues, I wrote a script called `pacrep`, which allows us to choose pacman repositories on a per package basis using rules defined in the configuration file (disregarding the repositories order in pacman configuration file). Just tell `pacrep` from which repository is a package to be installed/upgraded and it will always be installed/upgraded from that specific repository. For more information see https://github.com/leo-arch/pacrep.
-
-Before installing any package, `pacfree` will look for `pacrep` and use it if found. If not, it will execute `pacman` as usual.
-
-So, despite the fact that `isfree`, `pacfree`, and `pacrep` all work as standalone programs, they were designed to work together, as part of a bigger project: make pacman and Archlinux (without ceasing to be Archlinux), even more free, and thereby, more powerfull.
+If you find any bug, and you will, let me know it.
