@@ -510,7 +510,7 @@ function list_rules ()
 	local rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
 	if [[ ${#rules[*]} -gt 0 ]]; then
 		for rule in ${rules[*]}; do
-			echo "$rule"
+			echo -e "$nc${bold}${rule%%/*}/${green}${rule##*/}$nc"
 		done
 	else
 		echo -e "${yellow}[*]$nc No rules found"
@@ -595,21 +595,23 @@ function check_added_functions ()
 
 function list_repos ()
 {
-	if ! [[ -f /etc/pacman.conf ]]; then
-		echoerr "/etc/pacman.conf: No such file or directory"
+	local readonly PACMAN_CONF_FILE="/etc/pacman.conf"
+	
+	if ! [[ -f $PACMAN_CONF_FILE ]]; then
+		echoerr "${PACMAN_CONF_FILE}: No such file or directory"
 		exit $EXIT_FAILURE
 	fi
 
 	if [[ -n "$1" ]]; then
 		for i in "$@"; do
-			if [[ $(/usr/bin/grep "^\[${i}\]" /etc/pacman.conf) ]]; then
+			if [[ $(/usr/bin/grep "^\[${i}\]" "$PACMAN_CONF_FILE") ]]; then
 				echo -e "${green}[+]$nc [${i}]: Found"
 			else
 				echo -e "${red}[-]$nc [${i}]: Not found"
 			fi
 		done
 	else
-		/usr/bin/grep "^\[.*\]" /etc/pacman.conf \
+		/usr/bin/grep "^\[.*\]" "$PACMAN_CONF_FILE" \
 		| /usr/bin/grep -v "options"
 	fi
 }
@@ -669,8 +671,8 @@ function parse_arguments ()
 	local sync_index=-1
 
 	# If color is explicitly disabled in command line,
-	#+ disable color (overwriting the config file value)
-	if [[ ${p[$i]} == *"--color=never"* ]]; then
+	#+ overwrite the config file value.
+	if [[ ${p[*]} == *"--color=never"* ]]; then
 		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
 		pacman_color=""
 	fi
