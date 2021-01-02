@@ -668,10 +668,9 @@ function parse_arguments ()
 {
 	local sync_index=-1
 
-	# If not running interactively (for instance, if running in a
-	#+ script), or if color is explicitly disabled in command line,
+	# If color is explicitly disabled in command line,
 	#+ disable color (overwriting the config file value)
-	if [[ $- != *i* || ${p[*]} == *"--color=never"* ]]; then
+	if [[ ${p[$i]} == *"--color=never"* ]]; then
 		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
 		pacman_color=""
 	fi
