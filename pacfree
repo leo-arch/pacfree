@@ -51,19 +51,19 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.3"
+VERSION="0.4.4"
 AUTHOR="L. Abramovich"
-DATE="Jan 1, 2021"
+DATE="Jan 2, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
 ### BLACKLISTS ###
 
-blacklist_source="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
-blacklist_file="/tmp/pkgs_blacklist"
+BLACKLIST_SOURCE="https://git.parabola.nu/blacklist.git/plain/blacklist.txt"
+BLACKLIST_FILE="/tmp/pkgs_blacklist"
 
-blacklist_source_aur="https://git.parabola.nu/blacklist.git/plain/aur-blacklist.txt"
-blacklist_file_aur="/tmp/pkgs_blacklist_aur"
+BLACKLIST_SOURCE_AUR="https://git.parabola.nu/blacklist.git/plain/aur-blacklist.txt"
+BLACKLIST_FILE_AUR="/tmp/pkgs_blacklist_aur"
 
 ### EXIT CODES ###
 
@@ -79,7 +79,7 @@ function echoerr ()
 
 function help ()
 {
-	arg="$1"
+	local arg="$1"
 	case $arg in
 		help)
 
@@ -210,13 +210,13 @@ function check_sys_free ()
 
 			export GREP_COLORS="mt=1;31"
 			if /usr/bin/grep "$colorize" "^${i}:" \
-			"$blacklist_file"; then
+			"$BLACKLIST_FILE"; then
 				(( nonfree++ ))
 			else
 				export GREP_COLORS="mt=1;36"
 				# Check the AUR blacklist as well
 				if /usr/bin/grep "$colorize" "^${i}:" \
-				"$blacklist_file_aur"; then
+				"$BLACKLIST_FILE_AUR"; then
 					(( nonfree++ ))
 					aur=1
 				fi
@@ -320,36 +320,36 @@ function download_blacklist ()
 	# If full blacklist is enabled and the current blacklist file is
 	#+ not the full version, delete it
 	if [[ $full_blacklist -eq 1 ]]; then
-		if [[ -f $blacklist_file ]]; then
-			if ! [[ $(/usr/bin/grep "^pacman:" "$blacklist_file") ]]; then
-				/usr/bin/rm "$blacklist_file"
+		if [[ -f $BLACKLIST_FILE ]]; then
+			if ! [[ $(/usr/bin/grep "^pacman:" "$BLACKLIST_FILE") ]]; then
+				/usr/bin/rm "$BLACKLIST_FILE"
 			fi
 		fi
 
 	# If full blacklist is not enabled and the current blacklist file
 	#+ is the full version, delete it
 	else
-		if [[ -f $blacklist_file ]]; then
-			if [[ $(/usr/bin/grep "^pacman:" "$blacklist_file") ]]; then
-				/usr/bin/rm "$blacklist_file"
+		if [[ -f $BLACKLIST_FILE ]]; then
+			if [[ $(/usr/bin/grep "^pacman:" "$BLACKLIST_FILE") ]]; then
+				/usr/bin/rm "$BLACKLIST_FILE"
 			fi
 		fi
 	fi
 
-	if [[ -f $blacklist_file ]]; then
+	if [[ -f $BLACKLIST_FILE ]]; then
 
 		# If the blacklist file exists and it was last modified one
 		#+ day ago or less, do nothing
 		[[ $(($(/usr/bin/date "+%s") -  \
-		$(/usr/bin/stat -c "%Y" "$blacklist_file"))) \
+		$(/usr/bin/stat -c "%Y" "$BLACKLIST_FILE"))) \
 		-le 86400 ]] &&	return
 
-		/usr/bin/rm "$blacklist_file" 2>/dev/null
+		/usr/bin/rm "$BLACKLIST_FILE" 2>/dev/null
 	fi
 
 	echo -ne "${blue}::$nc$bold Downloading packages blacklist... $nc"
 
-	if /usr/bin/curl -s "$blacklist_source" \
+	if /usr/bin/curl -s "$BLACKLIST_SOURCE" \
 	| /usr/bin/sed 's/  //g' \
 	| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
 	&> /dev/null; then
@@ -360,13 +360,13 @@ function download_blacklist ()
 			# Parse the blacklist to remove technical and branding
 			#+ nonfree packs
 			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
-			/tmp/blacklist_full | sudo -u "$user" tee "$blacklist_file" \
+			/tmp/blacklist_full | sudo -u "$user" tee "$BLACKLIST_FILE" \
 			&>/dev/null
 
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		else
 			/usr/bin/sudo -u "$user" /usr/bin/cp \
-			/tmp/blacklist_full "$blacklist_file"
+			/tmp/blacklist_full "$BLACKLIST_FILE"
 
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		fi
@@ -378,20 +378,20 @@ function download_blacklist ()
 
 function download_blacklist_aur ()
 {
-	if [[ -f $blacklist_file_aur ]]; then
+	if [[ -f $BLACKLIST_FILE_AUR ]]; then
 
 		# If the blacklist file exists and it was last modified one
 		#+ day ago or less, do nothing
 		[[ $(($(/usr/bin/date "+%s") -  \
-		$(/usr/bin/stat -c "%Y" "$blacklist_file_aur"))) \
+		$(/usr/bin/stat -c "%Y" "$BLACKLIST_FILE_AUR"))) \
 		-le 86400 ]] &&	return
 
-		/usr/bin/rm "$blacklist_file_aur" 2>/dev/null
+		/usr/bin/rm "$BLACKLIST_FILE_AUR" 2>/dev/null
 	fi
 
 	echo -ne "${blue}::$nc$bold Downloading packages blacklist (AUR)... $nc"
 
-	if /usr/bin/curl -s "$blacklist_source_aur" \
+	if /usr/bin/curl -s "$BLACKLIST_SOURCE_AUR" \
 	| /usr/bin/sed 's/  //g' \
 	| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full_aur \
 	&> /dev/null; then
@@ -399,7 +399,7 @@ function download_blacklist_aur ()
 		echo -e "${green}OK$nc"
 
 		/usr/bin/sudo -u "$user" /usr/bin/cp \
-		/tmp/blacklist_full_aur "$blacklist_file_aur"
+		/tmp/blacklist_full_aur "$BLACKLIST_FILE_AUR"
 
 		/usr/bin/rm /tmp/blacklist_full_aur 2>/dev/null
 	else
@@ -452,7 +452,7 @@ function check_free ()
 		fi
 
 		# Check if $pkg is blacklisted
-		blacklisted="$(/usr/bin/grep "^${pkg}:" "$blacklist_file" \
+		blacklisted="$(/usr/bin/grep "^${pkg}:" "$BLACKLIST_FILE" \
 		2>/dev/null)"
 
 		# If using some pac-man able to install packages from the
@@ -461,7 +461,7 @@ function check_free ()
 		if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
 			if [[ -z $blacklisted ]]; then
 				blacklisted="$(/usr/bin/grep "^${pkg}:" \
-				"$blacklist_file_aur" 2>/dev/null)"
+				"$BLACKLIST_FILE_AUR" 2>/dev/null)"
 			fi
 		fi
 
@@ -511,9 +511,9 @@ function list_rules ()
 	if [[ ${#rules[*]} -gt 0 ]]; then
 		for rule in ${rules[*]}; do
 			echo "$rule"
-		done | /usr/bin/column
+		done
 	else
-		echo -e "${yellow}[*]$nc No rules defined"
+		echo -e "${yellow}[*]$nc No rules found"
 	fi
 }
 
@@ -644,7 +644,7 @@ function add_rules ()
 
 function print_logs ()
 {
-	LOG_FILE="/var/log/pacman.log"
+	local readonly LOG_FILE="/var/log/pacman.log"
 
 	if [[ -z $1 ]]; then
 		if ! /usr/bin/cat "$LOG_FILE"; then
@@ -668,7 +668,15 @@ function parse_arguments ()
 {
 	local sync_index=-1
 
-	# Get sync argument index and value
+	# If not running interactively (for instance, if running in a
+	#+ script), or if color is explicitly disabled in command line,
+	#+ disable color (overwriting the config file value)
+	if [[ $- != *i* || ${p[*]} == *"--color=never"* ]]; then
+		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
+		pacman_color=""
+	fi
+
+	# Process arguments
 	for (( i=0;i<${#p[*]};i++ )); do
 
 		case ${p[$i]} in
@@ -751,8 +759,8 @@ function parse_arguments ()
 			"-S"*)
 				sync_value=${p[$i]}
 				sync_index=$i
-				[[ $sync_value == *"y"* ]] && do_update=1
-				[[ $sync_value == *"u"* ]] && do_sysupgrade=1
+				[[ $sync_value == *'y'* ]] && do_update=1
+				[[ $sync_value == *'u'* ]] && do_sysupgrade=1
 			;;
 
 			--sync)
@@ -760,7 +768,7 @@ function parse_arguments ()
 				sync_index=$i
 			;;
 
-			# If not supported function, warn and exit
+			# If not a supported function, warn and exit
 			--ignore|--ignoregroup)
 				echoerr "${ME,,}: The --ignore and --ignoregroup \
 directives are not supported. You still can use pacman configuration \
@@ -800,7 +808,7 @@ file instead."
 
 		# Whatever is a valid package name goes to PKGS. Everything
 		#+ else goes to OPTS
-		if [[ ${p[$i]} == "-"* ]]; then
+		if [[ ${p[$i]} == '-'* ]]; then
 			OPTS[${#OPTS[*]}]=${p[$i]}
 		else
 			if valid_pkg_name "${p[$i]}" -eq 0; then
@@ -889,36 +897,48 @@ function check_updates ()
 	# Check the sync value looking for (y,--update) and
 	#+ (u,--sysupgrade)
 
-	if [[ -z $sync_value ]]; then
-		return
-	fi
+	[[ -z $sync_value ]] && return
 
-	# If update, well, update the database
+	# If update (-Sy*), well, update the database
 	if [[ $do_update -eq 1 ]]; then
-		/usr/bin/pacman "$pacman_color" -Sy || exit $EXIT_FAILURE
+		
+		/usr/bin/pacman $pacman_color ${OPTS[*]} -Sy \
+		|| exit $EXIT_FAILURE
+
 		# If -S, remove 'y' from sync options
 		if [[ $sync_value =~ ^"-S"[a-z]+$ ]]; then
 			local tmp=${sync_value//[y]}
 			sync_value="$tmp"
-		# If --sync (or -S --opts), remove --update from the
+		# If --sync (or -S --opts), remove "--update" from the
 		#+ OPTS array
 		else
 			OPTS=( "${OPTS[*]/--update/}" )
 		fi
 	fi
 
-	[[ $do_sysupgrade -eq 0 ]] && return
+	if [[ $do_sysupgrade -eq 0 ]]; then
+		# If no sysupgrade and no packages to be installed (-Sy), 
+		#+ there is nothing else to do
+		if [[ ${#PKGS[*]} -eq 0 ]]; then
+			exit $EXIT_SUCCESS
+		# If no sysupgrade but there are packages to install
+		#+ (-Sy pkgs(s)), return to continue performing checks
+		else
+			return
+		fi
+	fi
 
-	# If no update (only upgrade), update anyway
+	# If no update (only upgrade), that is, if -Su, update anyway
 	if [[ $do_update -eq 0 ]]; then
 		# Get available upgrades (update the database)
-		/usr/bin/pacman "$pacman_color" -Sy || exit $EXIT_FAILURE
+		/usr/bin/pacman $pacman_color ${OPTS[*]} -Sy \
+		|| exit $EXIT_FAILURE
 	fi
 
 	# Remove 'u' from sync options
 	if [[ $sync_value =~ ^"-S"[a-z]+$ ]]; then
-		tmp=${sync_value//[u]}
-		sync_value=$tmp
+		tmp="${sync_value//[u]}"
+		sync_value="$tmp"
 	else
 		OPTS=( "${OPTS[*]/--sysupgrade/}" )
 	fi
@@ -949,7 +969,7 @@ function check_updates ()
 
 	# Append packages to be upgraded to the PKGS array
 	for up in ${ups[*]}; do
-		PKGS[${#PKGS[*]}]=$up
+		PKGS[${#PKGS[*]}]="$up"
 	done
 
 	# List upgrades
@@ -1025,10 +1045,10 @@ check_free=true
 
 	### READ THE CONFIG FILE ###
 
-	full_blacklist=$(/usr/bin/grep "^full_blacklist=" "$CONFIG_FILE" \
-	| /usr/bin/cut -d"=" -f2)
+	local full_bl_value=$(/usr/bin/grep "^full_blacklist=" \
+	"$CONFIG_FILE" | /usr/bin/cut -d"=" -f2)
 
-	case $full_blacklist in
+	case $full_bl_value in
 		true) full_blacklist=1 ;;
 		false) full_blacklist=0 ;;
 		*) full_blacklist=0 ;;
@@ -1044,7 +1064,7 @@ check_free=true
 		exit $EXIT_FAILURE
 	fi
 
-	color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
+	local color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
 
 	case $color in
@@ -1060,7 +1080,7 @@ check_free=true
 		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
 	fi
 
-	rules_value=$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
+	local rules_value=$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
 
 	case $rules_value in
@@ -1069,7 +1089,7 @@ check_free=true
 		*) rules_ok=1 ;;
 	esac
 
-	free_value=$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
+	local free_value=$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
 
 	case $free_value in
@@ -1082,51 +1102,75 @@ check_free=true
 function valid_pkg_name ()
 {
 # From the Wiki:
-# Package names can contain only alphanumeric characters and any
+# "Package names can contain only alphanumeric characters and any
 #+ of @ . _ + -
 #+ Names are not allowed to start with hyphens or dots. All letters
-#+ should be lowercase.
+#+ should be lowercase."
 
-	pkg_name="$1"
+	local pkg_name="$1"
 
-	# Exclude strings only valid for --color and --architecture options
+	# At most, a package expression could contain 1 slash, like in
+	#+ "repo/pkg". If more than one, it's not a valid expression
+	local res=${pkg_name//[^\/]}
+	[[ ${#res} -gt 1 ]] && return $EXIT_FAILURE
+
+	local tmp=""
+	case $pkg_name in 
+
+		# Get pkg name in version expressions: "foo>1.2.3"
+		*'<'*)
+			tmp="${pkg_name%%<*}"
+			pkg_name="$tmp"
+		;;
+
+		*'>'*)
+			tmp="${pkg_name%%>*}"
+			pkg_name="$tmp"
+		;;
+		
+		# No valid package expression ends or starts with a slash. 
+		#+ If there is a slash, it should be in the middle, like 
+		#+ "repo/pkg"
+		'/'*|*'/') return $EXIT_FAILURE ;;
+	esac
+
+	# Get pkg name in repo expressions: "repo/pkg"
+	if [[ $pkg_name == *'/'* ]]; then
+		# If there is a slash in the middle of the string, check
+		#+ it is not a filename
+		if [[ -e "$pkg_name" ]]; then
+			return $EXIT_FAILURE
+		# If not a filename, take whatever comes after the slash
+		#+ as the package name
+		else
+			tmp="${pkg_name##*/}"
+			pkg_name="$tmp"
+		fi
+	fi
+	
+	[[ -z "$pkg_name" ]] && return $EXIT_FAILURE
+
+	# Now perform the checks for package names validity
+
 	case $pkg_name in
+		# Exclude strings only valid for --color and --architecture
+		#+ options
 		auto|i[0-6]86|pentium4|x86_64|any|always|never)
 			return $EXIT_FAILURE
 		;;
+
+		# If it starts with a hyphen or a dot, it's not a valid
+		#+ package name
+		'-'*|'.'*) return $EXIT_FAILURE ;;
 	esac
 
-	# If pkg_name starts with hyphen or dot, it's not a package
-	if [[ $(echo "$pkg_name" | /usr/bin/grep "^[.-]") ]]; then
-		return $EXIT_FAILURE
-	fi
-
-	# If $pkg_name contains a slash and is an existing filename,
-	#+ it's not a package
-	if [[ ($pkg_name == *"/"* || $pkg_name == "/"* || $pkg_name == *"/") \
-	&& -e $pkg_name ]]; then
-		return $EXIT_FAILURE
-	fi
-
-	# Include < and > to allow package versions. Ex: "pacman>5.0"
-	if [[ $pkg_name == *"<"* || $pkg_name == *">"* ]]; then
-		return $EXIT_SUCCESS
-	fi
-
 	# Exclude valid pkg name chars from pkg_name. If something remains,
-	#+ It's not package
+	#+ it's not a valid package name
 	if [[ $(echo "$pkg_name" \
 	| /usr/bin/sed 's/[a-z0-9]\|[,@+-./]//g') ]]; then
 		return $EXIT_FAILURE
-
 	else
-		# I included slash to allow repo/pkg expressions, but slash
-		# could be neither the first nor the last char in $pkg_name
-		if [[ $pkg_name == "/"* || $pkg_name == *"/" ]]; then
-			return $EXIT_FAILURE
-		else
-			return $EXIT_SUCCESS
-		fi
+		return $EXIT_SUCCESS
 	fi
 }
 
@@ -1146,7 +1190,7 @@ function main ()
 	# If only upgrading, that is, if not installing any extra package,
 	#+ we should not run check_free()
 	only_upgrade=0
-	# Catch -y,--update and -u,--sysupgrade options
+	# Catch "-y,--update" and "-u,--sysupgrade" options
 	do_update=0
 	do_sysupgrade=0
 
@@ -1154,18 +1198,24 @@ function main ()
 
 	# Should we use the complete blacklist or a
 	#+ trimmed down version without packages marked as non-free
-	#+ merely because of trademarking and technical issues?
+	#+ merely because of branding and technical issues?
 	full_blacklist=0
 
 	color_ok=1 # We colorize output by default
-	pacman_color="--color=always"
+	# The "auto" value for --color makes pacman to enable color only
+	#+ when outputting onto a tty (interactively, not scripts)
+	pacman_color="--color=auto"
 
 	rules_ok=1 # Should we perform the rules check?
 	free_ok=1 # Should we perform the free package check?
 
-
 	### GET/CREATE CONFIGURATION DIRECTORIES AND FILES ###
 	check_config
+
+	### GET OPTIONS, SYNC VALUE, AND PKGS TO BE INSTALLED
+	#+ FROM INPUT ###
+	# Pkgs to be installed are added to PKGS
+	parse_arguments
 
 	### Check for added functions: repo rules stuff, modified help,
 	#+ and libre repositories ###
@@ -1178,11 +1228,6 @@ function main ()
 	if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
 		download_blacklist_aur
 	fi
-
-	### GET OPTIONS, SYNC VALUE, AND PKGS TO BE INSTALLED
-	#+ FROM INPUT ###
-	# Pkgs to be installed are added to PKGS
-	parse_arguments
 
 	# If no operation is specified, but only package(s), -Syu
 	#+ is assumed
@@ -1205,7 +1250,7 @@ function main ()
 	check_updates
 
 	# Remove duplicates, just in case
-	tmp=( "$(for i in ${PKGS[*]}; do echo "$i"; done | /usr/bin/sort -u)" )
+	local tmp=( "$(for i in ${PKGS[*]}; do echo "$i"; done | /usr/bin/sort -u)" )
 	PKGS=( ${tmp[*]} )
 	unset tmp
 
@@ -1224,7 +1269,7 @@ function main ()
 
 	### FIRE UP THE PACMAN ###
 
-	if ! /usr/bin/"$PACMAN" "$pacman_color" ${OPTS[*]} $sync_value \
+	if ! /usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
 	${PKGS[*]}; then
 		exit $EXIT_FAILURE
 	fi
