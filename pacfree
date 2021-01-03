@@ -907,15 +907,19 @@ function check_updates ()
 	# If update (-Sy*), well, update the database
 	if [[ $do_update -eq 1 ]]; then
 		
-		# If -S, remove 'y' from sync options
+		# If -S, remove '-y' from sync options
+		# We must also remove -u, if there, since we don't want to
+		#+ upgrade the system now
 		if [[ $sync_value == "-S"* && $sync_value == *'y'* ]]; then
-			local tmp="${sync_value//y}"
+			local tmp="${sync_value//[y,u]}"
 			sync_value="$tmp"
-		# If --sync (or -S --opts), remove "--refresh, -y" from the
-		#+ OPTS array
+		# If --sync (or -S --opts), remove "--refresh, -y" and
+		#+ "--sysupgrade, -u" from the OPTS array
 		else
 			OPTS=( "${OPTS[*]/--refresh/}" )
 			OPTS=( "${OPTS[*]/-y/}" )
+			OPTS=( "${OPTS[*]/--sysupgrade/}" )
+			OPTS=( "${OPTS[*]/-u/}" )
 		fi
 
 		/usr/bin/pacman $pacman_color ${OPTS[*]} "$sync_value" -y \
