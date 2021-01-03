@@ -205,8 +205,8 @@ function check_sys_free ()
 		for i in $(/usr/bin/pacman -Qq); do
 
 			# Make sure pkg does not come from Parabola repos
-			if [[ $(/usr/bin/ls /var/cache/pacman/pkg/"$i"* 2>/dev/null\
-			| /usr/bin/grep '.*.par[0-9].*\|.*.parabola[0-9].*\|.*_gnu-[0-9].*') ]]; then
+			if /usr/bin/ls /var/cache/pacman/pkg/"$i"* 2>/dev/null \
+			| /usr/bin/grep -q '.*.par[0-9].*\|.*.parabola[0-9].*\|.*_gnu-[0-9].*'; then
 				continue
 			fi
 
@@ -274,7 +274,7 @@ enabled"
 
 	if ! [[ $(/usr/bin/pacman -Q parabola-keyring) ]]; then
 		local RFSL_OK=0
-		if [[ $(/usr/bin/grep "^RemoteFileSigLevel = Never$" /etc/pacman.conf) ]]; then
+		if /usr/bin/grep -q "^RemoteFileSigLevel = Never$" /etc/pacman.conf; then
 			RFSL_OK=1
 		fi
 
@@ -322,7 +322,7 @@ function download_blacklist ()
 	#+ not the full version, delete it
 	if [[ $full_blacklist -eq 1 ]]; then
 		if [[ -f $BLACKLIST_FILE ]]; then
-			if ! [[ $(/usr/bin/grep "^pacman:" "$BLACKLIST_FILE") ]]; then
+			if ! /usr/bin/grep -q "^pacman:" "$BLACKLIST_FILE"; then
 				/usr/bin/rm "$BLACKLIST_FILE"
 			fi
 		fi
@@ -331,7 +331,7 @@ function download_blacklist ()
 	#+ is the full version, delete it
 	else
 		if [[ -f $BLACKLIST_FILE ]]; then
-			if [[ $(/usr/bin/grep "^pacman:" "$BLACKLIST_FILE") ]]; then
+			if /usr/bin/grep -q "^pacman:" "$BLACKLIST_FILE"; then
 				/usr/bin/rm "$BLACKLIST_FILE"
 			fi
 		fi
@@ -476,7 +476,8 @@ function check_free ()
 	|| echo "none")"
 
 			local answer="."
-			local msg=$(echo -e "${blue}::$nc$bold Do you want to install '${PKGS[$i]}' anyway? [y/N]$nc ")
+			local msg=""
+			msg=$(echo -e "${blue}::$nc$bold Do you want to install '${PKGS[$i]}' anyway? [y/N]$nc ")
 
 			while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
 				read -rp "$msg" answer
@@ -602,7 +603,7 @@ function list_repos ()
 
 	if [[ -n "$1" ]]; then
 		for i in "$@"; do
-			if [[ $(/usr/bin/grep "^\[${i}\]" "$PACMAN_CONF_FILE") ]]; then
+			if /usr/bin/grep -q "^\[${i}\]" "$PACMAN_CONF_FILE"; then
 				echo -e "${green}[+]$nc [${i}]: Found"
 			else
 				echo -e "${red}[-]$nc [${i}]: Not found"
@@ -610,7 +611,7 @@ function list_repos ()
 		done
 	else
 		/usr/bin/grep "^\[.*\]" "$PACMAN_CONF_FILE" \
-		| /usr/bin/grep -v "options" | /usr/bin/tr -d "[\[\]]"
+		| /usr/bin/grep -v "options" | /usr/bin/tr -d "\[\]"
 		# Or just:
 		# /usr/bin/pacman-conf -l
 	fi
@@ -634,7 +635,7 @@ function add_rules ()
 			continue
 		fi
 
-		if ! [[ $(/usr/bin/grep "$rule" "$RULES_FILE")  ]]; then
+		if ! /usr/bin/grep -q "$rule" "$RULES_FILE"; then
 			echo "$rule" >> "$RULES_FILE"
 			echo -e "${green}[+]$nc ${rule}: New rule successfully added"
 		else
@@ -894,6 +895,9 @@ function check_rules ()
 }
 
 function check_updates ()
+# The main trick of this function is to grab all packages to be
+#+ upgraded to be later checked against the rules list and finally
+#+ installed va the -S option.
 {
 	# Check the sync value looking for (y,--refresh) and
 	#+ (u,--sysupgrade)
