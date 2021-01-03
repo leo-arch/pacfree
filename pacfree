@@ -51,9 +51,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.4"
+VERSION="0.4.5"
 AUTHOR="L. Abramovich"
-DATE="Jan 2, 2021"
+DATE="Jan 3, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -118,6 +118,8 @@ Use '${ME,,} {-h --help}' with an operation for available options
 
 If no operation is specified, but only packages, -Syu is assumed
 
+Use --color=never to disable colored output
+
 For those users coming from Debian/RedHat based systems, the following \
 APT/DNF syntax is recognized (the pacman/${ME,,} equivalent is \
 provided in parentheses and is always the recommended way to go):
@@ -125,8 +127,8 @@ provided in parentheses and is always the recommended way to go):
   install (-Syu)
   install-local (-U)
   remove (-Rns)
-  update (-Sy)
-  upgrade (-Syu)
+  update/refresh (-Sy)
+  upgrade/sysupgrade (-Syu)
   search (-Ss)
   list-installed (-Qe)
   list-installed-native (-Qen)
@@ -249,8 +251,7 @@ enabled"
 		else
 			answer="."
 
-			while [[ $answer != "Y" && $answer != "y" \
-			&& $answer != "N" && $answer != "n" && $answer != "" ]]; do
+			while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
 				read -rp " Add [${x}]? [y/N] " answer
 			done
 
@@ -474,12 +475,10 @@ function check_free ()
 \n$nc${bold}Alternative package${nc}: $([[ $alternative ]] && echo "$alternative" \
 	|| echo "none")"
 
-			answer="."
-			valid_answers=( "y" "Y" "n" "N" )
-			msg=$(echo -e "${blue}::$nc$bold Do you want to install '${PKGS[$i]}' anyway? [y/N]$nc ")
+			local answer="."
+			local msg=$(echo -e "${blue}::$nc$bold Do you want to install '${PKGS[$i]}' anyway? [y/N]$nc ")
 
-			while [[ ! " ${valid_answers[*]} " =~ " ${answer} " \
-			&& $answer != "" ]]; do
+			while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
 				read -rp "$msg" answer
 			done
 
@@ -575,8 +574,7 @@ function check_added_functions ()
 
 		-a|--add-rules)
 			shift
-			rules=( "$@" )
-			add_rules ${rules[*]}
+			add_rules "$@"
 			exit $EXIT_SUCCESS
 		;;
 
@@ -595,7 +593,7 @@ function check_added_functions ()
 
 function list_repos ()
 {
-	local readonly PACMAN_CONF_FILE="/etc/pacman.conf"
+	local PACMAN_CONF_FILE="/etc/pacman.conf"
 	
 	if ! [[ -f $PACMAN_CONF_FILE ]]; then
 		echoerr "${PACMAN_CONF_FILE}: No such file or directory"
@@ -612,7 +610,9 @@ function list_repos ()
 		done
 	else
 		/usr/bin/grep "^\[.*\]" "$PACMAN_CONF_FILE" \
-		| /usr/bin/grep -v "options"
+		| /usr/bin/grep -v "options" | /usr/bin/tr -d "[\[\]]"
+		# Or just:
+		# /usr/bin/pacman-conf -l
 	fi
 }
 
@@ -646,7 +646,7 @@ function add_rules ()
 
 function print_logs ()
 {
-	local readonly LOG_FILE="/var/log/pacman.log"
+	local LOG_FILE="/var/log/pacman.log"
 
 	if [[ -z $1 ]]; then
 		if ! /usr/bin/cat "$LOG_FILE"; then
@@ -674,7 +674,7 @@ function parse_arguments ()
 	#+ overwrite the config file value.
 	if [[ ${p[*]} == *"--color=never"* ]]; then
 		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
-		pacman_color=""
+		pacman_color=""; color_ok=0
 	fi
 
 	# Process arguments
@@ -687,8 +687,8 @@ function parse_arguments ()
 			install) p[$i]="-Syu" ;;
 			install-local) p[$i]="-U" ;;
 			remove) p[$i]="-Rns" ;;
-			update) p[$i]="-Sy" ;;
-			upgrade) p[$i]="-Syu" ;;
+			update|refresh) p[$i]="-Sy" ;;
+			upgrade|sysupgrade) p[$i]="-Syu" ;;
 			search) p[$i]="-Ss" ;;
 			list-installed) p[$i]="-Qe" ;;
 			list-installed-native) p[$i]="-Qen" ;;
@@ -752,10 +752,10 @@ function parse_arguments ()
 		#+ (possibily) modified in the previous case statement
 		case ${p[$i]} in
 
-			# Catch sync, update and sysupgrade options
-			--update) do_update=1 ;;
+			# Catch sync, refresh (-y) and sysupgrade (-u) options
+			--refresh|-y) do_update=1 ;;
 			
-			--sysupgrade) do_sysupgrade=1 ;;
+			--sysupgrade|-u) do_sysupgrade=1 ;;
 			
 			"-S"*)
 				sync_value=${p[$i]}
@@ -853,7 +853,7 @@ function check_rules ()
 
 		pkg_name=${PKGS[$i]}
 
-		# Check pkg version
+		# Get package name from version expressions
 		if [[ ${PKGS[$i]} == *"<"* || ${PKGS[$i]} == *">"* ]]; then
 			case ${PKGS[$i]} in
 				*"<"*)
@@ -895,33 +895,38 @@ function check_rules ()
 
 function check_updates ()
 {
-	# Check the sync value looking for (y,--update) and
+	# Check the sync value looking for (y,--refresh) and
 	#+ (u,--sysupgrade)
 
 	[[ -z $sync_value ]] && return
-
+	
 	# If update (-Sy*), well, update the database
 	if [[ $do_update -eq 1 ]]; then
 		
-		/usr/bin/pacman $pacman_color ${OPTS[*]} -Sy \
-		|| exit $EXIT_FAILURE
-
 		# If -S, remove 'y' from sync options
-		if [[ $sync_value =~ ^"-S"[a-z]+$ ]]; then
-			local tmp=${sync_value//[y]}
+		if [[ $sync_value == "-S"* && $sync_value == *'y'* ]]; then
+			local tmp="${sync_value//y}"
 			sync_value="$tmp"
-		# If --sync (or -S --opts), remove "--update" from the
+		# If --sync (or -S --opts), remove "--refresh, -y" from the
 		#+ OPTS array
 		else
-			OPTS=( "${OPTS[*]/--update/}" )
+			OPTS=( "${OPTS[*]/--refresh/}" )
+			OPTS=( "${OPTS[*]/-y/}" )
 		fi
+
+		/usr/bin/pacman $pacman_color ${OPTS[*]} "$sync_value" -y \
+		|| exit $EXIT_FAILURE
+
 	fi
 
 	if [[ $do_sysupgrade -eq 0 ]]; then
 		# If no sysupgrade and no packages to be installed (-Sy), 
 		#+ there is nothing else to do
-		if [[ ${#PKGS[*]} -eq 0 ]]; then
+
+		if [[ ${#PKGS[*]} -eq 0 \
+		&& (${#sync_value} -lt 3 || ${OPTS[*]} != *"--clean"*) ]]; then
 			exit $EXIT_SUCCESS
+
 		# If no sysupgrade but there are packages to install
 		#+ (-Sy pkgs(s)), return to continue performing checks
 		else
@@ -929,19 +934,20 @@ function check_updates ()
 		fi
 	fi
 
-	# If no update (only upgrade), that is, if -Su, update anyway
-	if [[ $do_update -eq 0 ]]; then
-		# Get available upgrades (update the database)
-		/usr/bin/pacman $pacman_color ${OPTS[*]} -Sy \
-		|| exit $EXIT_FAILURE
-	fi
-
 	# Remove 'u' from sync options
-	if [[ $sync_value =~ ^"-S"[a-z]+$ ]]; then
-		tmp="${sync_value//[u]}"
+	if [[ $sync_value == "-S"* && $sync_value == *"u"* ]]; then
+		tmp="${sync_value//u}"
 		sync_value="$tmp"
 	else
 		OPTS=( "${OPTS[*]/--sysupgrade/}" )
+		OPTS=( "${OPTS[*]/-u/}" )
+	fi
+
+	# If no update (only upgrade), that is, if -Su, update anyway
+	if [[ $do_update -eq 0 ]]; then
+		# Get available upgrades (update the database)
+		/usr/bin/pacman $pacman_color ${OPTS[*]} "$sync_value" -y \
+		|| exit $EXIT_FAILURE
 	fi
 
 	# Get pkgs to be upgraded
@@ -1046,7 +1052,12 @@ check_free=true
 
 	### READ THE CONFIG FILE ###
 
-	local full_bl_value=$(/usr/bin/grep "^full_blacklist=" \
+	local full_bl_value=""
+	local color=""
+	local rules_value=""
+	local free_value=""
+
+	full_bl_value=$(/usr/bin/grep "^full_blacklist=" \
 	"$CONFIG_FILE" | /usr/bin/cut -d"=" -f2)
 
 	case $full_bl_value in
@@ -1065,7 +1076,8 @@ check_free=true
 		exit $EXIT_FAILURE
 	fi
 
-	local color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
+
+	color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
 
 	case $color in
@@ -1081,7 +1093,8 @@ check_free=true
 		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
 	fi
 
-	local rules_value=$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
+	local rules_value=""
+	rules_value=$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
 
 	case $rules_value in
@@ -1090,7 +1103,7 @@ check_free=true
 		*) rules_ok=1 ;;
 	esac
 
-	local free_value=$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
+	free_value=$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)
 
 	case $free_value in
@@ -1248,11 +1261,13 @@ function main ()
 
 	### CHECK FOR UPDATES ###
 	# Add pkgs to be upgraded, if any, to PKGS
-	check_updates
+	if [[ $do_update -eq 1 || $do_sysupgrade -eq 1 ]]; then
+		check_updates
+	fi
 
 	# Remove duplicates, just in case
 	local tmp=( "$(for i in ${PKGS[*]}; do echo "$i"; done | /usr/bin/sort -u)" )
-	PKGS=( ${tmp[*]} )
+	PKGS=( "${tmp[*]}" )
 	unset tmp
 
 	# $no_install was set above, in parse_arguments()
