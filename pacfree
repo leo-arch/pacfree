@@ -1293,6 +1293,10 @@ function main ()
 
 	### FIRE UP THE PACMAN ###
 
+	if [[ $do_sysupgrade -eq 1 ]]; then
+		echo -e "${blue}::$nc$bold Starting full system upgrade...$nc"
+	fi
+
 	if ! /usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
 	${PKGS[*]}; then
 		exit $EXIT_FAILURE
