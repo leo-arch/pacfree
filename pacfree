@@ -51,7 +51,7 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.8"
+VERSION="0.4.9"
 AUTHOR="L. Abramovich"
 DATE="Jan 5, 2021"
 LICENSE="GPL2+"
@@ -92,36 +92,31 @@ function help ()
 
 			if [[ $PACMAN != "pacman" ]]; then
 				/usr/bin/"$PACMAN" -h
-				echo "	${ME,,} {-f --check-free}
-  ${ME,,} {-l --list-rules}
-  ${ME,,} {-a --add-rule}	  <rule(s)>
-  ${ME,,} {-L --add-libre}
-  ${ME,,} {-r --list-repos} [repo(s)]
-  ${ME,,} {-u --upgrademe}"
+			else
+				echo -e "${ME}, the free-software aware pacman" \
+						"\nUsage: ${ME,,} <operation> [...]\n"
+
+				echo -e "Operations:
+    ${ME,,} {-h --help}
+    ${ME,,} {-V --version}
+    ${ME,,} {-D --database}   <options> <package(s)>
+    ${ME,,} {-F --files}      [options] [package(s)]
+    ${ME,,} {-Q --query}      [options] [package(s)]
+    ${ME,,} {-R --remove}     [options] <package(s)>
+    ${ME,,} {-S --sync}       [options] [package(s)]
+    ${ME,,} {-T --deptest}    [options] [package(s)]
+    ${ME,,} {-U --upgrade}    [options] <file(s)>"
+
 			fi
 
-			echo -e "${ME}, the free-software aware pacman" \
-					"\nUsage: ${ME,,} <operation> [...]
-
-Operations:
-  ${ME,,} {-h --help}
-  ${ME,,} {-V --version}
-  ${ME,,} {-D --database}   <options> <package(s)>
-  ${ME,,} {-F --files}      [options] [package(s)]
-  ${ME,,} {-Q --query}      [options] [package(s)]
-  ${ME,,} {-R --remove}     [options] <package(s)>
-  ${ME,,} {-S --sync}       [options] [package(s)]
-  ${ME,,} {-T --deptest}    [options] [package(s)]
-  ${ME,,} {-U --upgrade}    [options] <file(s)>
-
-$ME specific operations:
-  ${ME,,} [package(s)]
-  ${ME,,} {-f --check-free}
-  ${ME,,} {-l --list-rules}
-  ${ME,,} {-a --add-rule}   <rule(s)>
-  ${ME,,} {-L --add-libre}
-  ${ME,,} {-r --list-repos} [repo(s)]
-  ${ME,,} {-u --upgrademe}
+echo -e "\n$ME specific operations:
+    ${ME,,} [package(s)]
+    ${ME,,} {-f --check-free}
+    ${ME,,} {-l --list-rules}
+    ${ME,,} {-a --add-rule}   <rule(s)>
+    ${ME,,} {-L --add-libre}
+    ${ME,,} {-r --list-repos} [repo(s)]
+    ${ME,,} {-u --upgrademe}
 
 Use '${ME,,} {-h --help}' with an operation for available options
 
@@ -133,36 +128,38 @@ For those users coming from Debian/RedHat based systems, the following \
 APT/DNF syntax is recognized (the pacman/${ME,,} equivalent is \
 provided in parentheses and is always the recommended way to go):
 
-  install (-Syu)
-  install-local (-U)
-  remove (-Rns)
-  update/refresh (-Sy)
-  upgrade/sysupgrade (-Syu)
-  search (-Ss)
-  list-installed (-Qe)
-  list-installed-native (-Qen)
-  list-installed-foreign (-Qem)
-  list-installed-deps (-Qd)
-  list-updates (sudo pacman -Sy && pacman -Qu)
-  list-repos ('pacfree -r' or 'pacman-conf -l' )
-  info (-Qi)
-  info-remote (-Si)
-  list-files (-Ql)
-  provides (-Qo)
-  provides-remote (-F)
-  check (-Qk)
-  check-free (pacfree -f)
-  clean (-Sc)
-  clean-all (-Scc)
-  download (-Sw)
-  help (-h)
-  version (-V)
-  history (cat /var/log/pacman.log)"
+    install (-Syu)
+    install-local (-U)
+    remove (-Rns)
+    update/refresh (-Sy)
+    upgrade/sysupgrade (-Syu)
+    search (-Ss)
+    list-installed (-Qe)
+    list-installed-native (-Qen)
+    list-installed-foreign (-Qem)
+    list-installed-deps (-Qd)
+    list-updates (sudo pacman -Sy && pacman -Qu)
+    list-repos ('pacfree -r' or 'pacman-conf -l' )
+    info (-Qi)
+    info-remote (-Si)
+    list-files (-Ql)
+    provides (-Qo)
+    provides-remote (-F)
+    check (-Qk)
+    check-free (pacfree -f)
+    clean (-Sc)
+    clean-all (-Scc)
+    download (-Sw)
+    help (-h)
+    version (-V)
+    history (cat /var/log/pacman.log)"
 		;;
 
 		checkfree)
-			echo -e "List all non-free installed packages" \
-					"Usage: ${ME,,} {-f --check-free}"
+			echo -e "With no argument, lists all non-free installed" \
+					"packages. Else, it checks packages specified as" \
+					"further arguments against the blacklists" \
+					"\nUsage: ${ME,,} {-f --check-free} [packages(s)]"
 		;;
 
 		addlibre)
@@ -483,6 +480,10 @@ function extra_alternatives ()
 
 function check_free ()
 {
+	# Check if called from the command line as '-f pkgs(s)'
+	local external=0
+	[[ -n $1 ]] && external=1
+
 	[[ ${#PKGS[*]} -eq 0 ]] && return
 
 	local pkgs_counter=${#PKGS[*]}
@@ -491,6 +492,8 @@ function check_free ()
 	local blacklisted=""
 	local alternative=""
 	local description=""
+	local aur=0
+	local source=""
 
 	echo -e "${blue}::$nc$bold Checking packages against the" \
 			"blacklist... $nc"
@@ -540,6 +543,7 @@ function check_free ()
 		if [[ -z $blacklisted && $unofficial_repos -eq 1 ]]; then
 			blacklisted="$(/usr/bin/grep "^${pkg}:" \
 			"$BLACKLIST_FILE_AUR" 2>/dev/null)"
+			aur=1
 		fi
 
 		if [[ -n $blacklisted ]]; then
@@ -556,32 +560,45 @@ function check_free ()
 				alternative="$(extra_alternatives "$pkg")"
 			fi
 
-			echo -e "\n$nc$bold'$pkg'$nc is a ${red}non-free$nc" \
+			[[ aur -eq 0 ]] && source="official" || source="AUR"
+
+			echo -e "\n$nc$bold'$pkg'$nc ($source) is a ${red}non-free$nc" \
 					"package\n$nc${bold}Description${nc}:" \
 					"$description\n$nc${bold}Alternative" \
 					"package${nc}: $alternative"
 
-			local answer="."
-			local msg=""
-			msg=$(echo -e "${blue}::$nc$bold Do you want to install" \
-				  "'${PKGS[$i]}' anyway? [y/N]$nc ")
+			# Ask only if not called from the command line
+			if [[ $external -eq 0 ]]; then
+				local answer="."
+				local msg=""
+				msg=$(echo -e "${blue}::$nc$bold Do you want to install" \
+					  "'${PKGS[$i]}' anyway? [y/N]$nc ")
 
-			while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
-				read -rp "$msg" answer
-			done
+				while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
+					read -rp "$msg" answer
+				done
 
-			case $answer in
+				case $answer in
 
-				""|n|N)
-					PKGS[$i]=""
-					(( pkgs_counter-- ))
-				;;
+					""|n|N)
+						PKGS[$i]=""
+						(( pkgs_counter-- ))
+					;;
 
-				y|Y) ;;
-			esac
+					y|Y) ;;
+				esac
+			fi
 
+		else
+			# Only if called from the command line
+			if [[ $external -eq 1 && -z $blacklisted ]]; then
+				echo -e "\n$nc${bold}'${PKGS[$i]}'$nc is ${green}not" \
+						"blacklisted$nc"
+			fi
 		fi
 	done
+
+	[[ $external -eq 1 ]] && exit $EXIT_SUCCESS
 
 	# If no pkg left after this check, just exit
 	[[ $pkgs_counter -eq 0 ]] && exit $EXIT_SUCCESS
@@ -664,9 +681,19 @@ function check_added_functions ()
 
 		# Added functions
 		-f|--check-free)
+
 			download_blacklist
 			download_blacklist_aur
-			check_sys_free
+
+			# If no package specified, check the entire system
+			if [[ -z $2 ]]; then
+				check_sys_free
+			# Otherwise, check only specified packages
+			else
+				unofficial_repos=1
+				check_free "external"
+			fi
+
 			exit $EXIT_SUCCESS
 		;;
 
