@@ -51,10 +51,10 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.6"
+VERSION="0.4.7"
 AUTHOR="L. Abramovich"
-DATE="Jan 4, 2021"
-LICENSE="GPL2"
+DATE="Jan 5, 2021"
+LICENSE="GPL2+"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
 ### BLACKLISTS ###
@@ -96,7 +96,8 @@ function help ()
   ${ME,,} {-l --list-rules}
   ${ME,,} {-a --add-rule}	  <rule(s)>
   ${ME,,} {-L --add-libre}
-  ${ME,,} {-r --list-repos} [repo(s)]"
+  ${ME,,} {-r --list-repos} [repo(s)]
+  ${ME,,} {-u --upgrademe}"
 			fi
 
 			echo -e "${ME}, the free-software aware pacman" \
@@ -120,6 +121,7 @@ $ME specific operations:
   ${ME,,} {-a --add-rule}   <rule(s)>
   ${ME,,} {-L --add-libre}
   ${ME,,} {-r --list-repos} [repo(s)]
+  ${ME,,} {-u --upgrademe}
 
 Use '${ME,,} {-h --help}' with an operation for available options
 
@@ -182,6 +184,12 @@ provided in parentheses and is always the recommended way to go):
 			echo -e "List currently enabled repositories or check" \
 					"repositories specified as further arguments" \
 					"\nUsage: ${ME,,} {-r --list-repos} [repo(s)]"
+		;;
+
+		upgrademe)
+			echo -e "Check current upstream version" \
+					"\nUsage: ${ME,,} {-u --upgrademe}"
+		;;
 	esac
 }
 
@@ -299,17 +307,18 @@ function add_libre_repos ()
 					"to Never...$nc "
 			/usr/bin/sudo /usr/bin/sed -i \
 			'/RemoteFileSigLevel/a RemoteFileSigLevel = Never' \
-			/etc/pacman.conf
+			/etc/pacman.conf || exit $EXIT_FAILURE
 		fi
 
 		echo -e "${blue}::$nc$bold Installing parabola-kerying...$nc "
-		/usr/bin/sudo /usr/bin/pacman -U "$keyring_url"
+		/usr/bin/sudo /usr/bin/pacman -U "$keyring_url" \
+		|| exit $EXIT_FAILURE
 
 		if [[ RFSL_OK -eq 0 ]]; then
 			echo -e "${blue}::$nc$bold Reverting changes made to" \
 					"RemoteFileSigLevel...$nc "
 			/usr/bin/sudo /usr/bin/sed -i '/RemoteFileSigLevel = Never/d' \
-			/etc/pacman.conf
+			/etc/pacman.conf || exit $EXIT_FAILURE
 		fi
 	fi
 
@@ -317,7 +326,8 @@ function add_libre_repos ()
 		echo -e "${blue}::$nc$bold Downloading Parabola's" \
 				"mirrorlist...$nc "
 		/usr/bin/sudo /usr/bin/curl -so \
-		/etc/pacman.d/parabola_mirrorlist "$mirrorlist_url"
+		/etc/pacman.d/parabola_mirrorlist "$mirrorlist_url" \
+		|| exit $EXIT_FAILURE
 	fi
 
 	for x in ${libre_repos[*]}; do
@@ -325,18 +335,18 @@ function add_libre_repos ()
 		if ! [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
 			echo -e "${blue}::$nc$bold Adding [${x}] repository" \
 					"to /etc/pacman.conf...$nc "
-			
+
 			echo -e "\n[${x}]\nInclude =" \
 					"/etc/pacman.d/parabola_mirrorlist" \
 					| /usr/bin/sudo /usr/bin/tee -a /etc/pacman.conf \
-					&>/dev/null
+					1>/dev/null || exit $EXIT_FAILURE
 		fi
 
 	done
 
 	echo -e "${blue}::$nc$bold Updating pacman database...$nc "
 
-	/usr/bin/sudo /usr/bin/pacman -Sy
+	/usr/bin/sudo /usr/bin/pacman -Sy || exit $EXIT_FAILURE
 }
 
 ################################
@@ -363,14 +373,11 @@ function download_blacklist ()
 	fi
 
 	if [[ -f $BLACKLIST_FILE ]]; then
-
 		# If the blacklist file exists and it was last modified one
 		#+ day ago or less, do nothing
 		[[ $(($(/usr/bin/date "+%s") -  \
 		$(/usr/bin/stat -c "%Y" "$BLACKLIST_FILE"))) \
 		-le 86400 ]] &&	return
-
-		/usr/bin/rm "$BLACKLIST_FILE" 2>/dev/null
 	fi
 
 	echo -ne "${blue}::$nc$bold Downloading packages blacklist... $nc"
@@ -378,7 +385,7 @@ function download_blacklist ()
 	if /usr/bin/curl -s "$BLACKLIST_SOURCE" \
 	| /usr/bin/sed 's/  //g' \
 	| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full \
-	&> /dev/null; then
+	1> /dev/null; then
 		echo -e "${green}OK$nc"
 
 		if [[ $full_blacklist -eq 0 ]]; then
@@ -387,17 +394,19 @@ function download_blacklist ()
 			#+ nonfree packs
 			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
 			/tmp/blacklist_full | sudo -u "$user" \
-			tee "$BLACKLIST_FILE" &>/dev/null
+			tee "$BLACKLIST_FILE" 1>/dev/null \
+			|| exit $EXIT_FAILURE
 
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		else
 			/usr/bin/sudo -u "$user" /usr/bin/cp \
-			/tmp/blacklist_full "$BLACKLIST_FILE"
+			/tmp/blacklist_full "$BLACKLIST_FILE" \
+			|| exit $EXIT_FAILURE 
 
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		fi
 	else
-		echoerr "\n${red}[-]$nc Error: try again"
+#		echoerr "\n${red}[-]$nc Error: try again"
 		exit $EXIT_FAILURE
 	fi
 }
@@ -407,14 +416,11 @@ function download_blacklist ()
 function download_blacklist_aur ()
 {
 	if [[ -f $BLACKLIST_FILE_AUR ]]; then
-
 		# If the blacklist file exists and it was last modified one
 		#+ day ago or less, do nothing
 		[[ $(($(/usr/bin/date "+%s") -  \
 		$(/usr/bin/stat -c "%Y" "$BLACKLIST_FILE_AUR"))) \
 		-le 86400 ]] &&	return
-
-		/usr/bin/rm "$BLACKLIST_FILE_AUR" 2>/dev/null
 	fi
 
 	echo -ne "${blue}::$nc$bold Downloading packages blacklist" \
@@ -422,17 +428,13 @@ function download_blacklist_aur ()
 
 	if /usr/bin/curl -s "$BLACKLIST_SOURCE_AUR" \
 	| /usr/bin/sed 's/  //g' \
-	| /usr/bin/sudo -u "$user" /usr/bin/tee /tmp/blacklist_full_aur \
-	&> /dev/null; then
+	| /usr/bin/sudo -u "$user" /usr/bin/tee "$BLACKLIST_FILE_AUR" \
+	1> /dev/null; then
 
 		echo -e "${green}OK$nc"
 
-		/usr/bin/sudo -u "$user" /usr/bin/cp \
-		/tmp/blacklist_full_aur "$BLACKLIST_FILE_AUR"
-
-		/usr/bin/rm /tmp/blacklist_full_aur 2>/dev/null
 	else
-		echoerr "\n${red}[-]$nc Error: try again"
+#		echoerr "\n${red}[-]$nc Error: try again"
 		exit $EXIT_FAILURE
 	fi
 }
@@ -593,6 +595,8 @@ function check_added_functions ()
 
 				-r|--list-repos) help "listrepos" ;;
 
+				-u|--upgrademe) help "upgrademe" ;;
+
 				*) /usr/bin/"$PACMAN" "$1" --help ;;
 			esac
 
@@ -641,7 +645,41 @@ function check_added_functions ()
 			list_repos "$@"
 			exit $EXIT_SUCCESS
 		;;
+
+		-u|--upgrademe)
+			upgrade_me
+			exit $EXIT_SUCCESS
+		;;
 	esac
+}
+
+################################
+
+function upgrade_me ()
+{
+	if ! [[ $(type -P /usr/bin/vercmp) ]]; then
+		echoerr "${ME,,}: 'vercmp': Command not found"
+		exit $EXIT_FAILURE
+	fi
+
+	local RAW_URL="https://raw.githubusercontent.com/leo-arch/pacfree/master/pacfree"
+	local upstream_version=""
+
+	upstream_version="$(/usr/bin/curl -s "$RAW_URL" \
+	| /usr/bin/grep "VERSION=" | /usr/bin/cut -d'=' -f2 \
+	| /usr/bin/sed 's/"//g')"
+
+	if [[ -z $upstream_version ]]; then
+		echoerr "${ME,,}: Could not connect to server. Try again or visit" \
+		"$WEBSITE"
+		exit $EXIT_FAILURE
+	fi
+
+	if [[ $(/usr/bin/vercmp "$upstream_version" "$VERSION") -gt 0 ]]; then
+		echo "${ME,,}: New version available ($upstream_version)"
+	else
+		echo "$ME ($VERSION) is up to date"
+	fi
 }
 
 ################################
@@ -649,7 +687,7 @@ function check_added_functions ()
 function list_repos ()
 {
 	local PACMAN_CONF_FILE="/etc/pacman.conf"
-	
+
 	if ! [[ -f $PACMAN_CONF_FILE ]]; then
 		echoerr "${ME,,}: ${PACMAN_CONF_FILE}: No such file or" \
 				"directory"
@@ -691,21 +729,23 @@ function add_rules ()
 
 			if ! [[ $(/usr/bin/pacman-conf -r "$repo" \
 			2>/dev/null) ]]; then
-				echoerr "${red}[-]$nc ${repo}: No such repository"
+				echoerr "${red}[-]$nc '${repo}': No such repository"
 				continue
 			fi
 		else
-			echoerr "${red}[-]$nc ${rule}: A repository must be" \
+			echoerr "${red}[-]$nc '${rule}': A repository must be" \
 					"specified"
 			continue
 		fi
 
 		if ! /usr/bin/grep -q "$rule" "$RULES_FILE"; then
-			echo "$rule" >> "$RULES_FILE"
-			echo -e "${green}[+]$nc ${rule}: New rule successfully" \
+			echo "$rule" | /usr/bin/sudo -u "$user" /usr/bin/tee -a \
+			"$RULES_FILE" 1>/dev/null || exit $EXIT_FAILURE
+
+			echo -e "${green}[+]$nc '${rule}': New rule successfully" \
 					"added"
 		else
-			echoerr "${red}[-]$nc ${rule}: Rule already exists"
+			echoerr "${red}[-]$nc '${rule}': Rule already exists"
 			continue
 		fi
 	done
@@ -828,9 +868,9 @@ function parse_arguments ()
 			# Catch sync, refresh (-y) and sysupgrade (-u) options
 			# Increment do_update to catch -yy
 			--refresh|-y) (( do_update++ )) ;;
-			
+
 			--sysupgrade|-u) do_sysupgrade=1 ;;
-			
+
 			"-S"*)
 				sync_value=${p[$i]}
 				sync_index=$i
@@ -852,7 +892,8 @@ function parse_arguments ()
 			--ignore|--ignoregroup)
 				echoerr "${ME,,}: The --ignore and --ignoregroup" \
 						"directives are not supported. You still" \
-						"can use pacman configuration file instead."
+						"can use pacman configuration file" \
+						"(/etc/pacman.conf) instead."
 				exit $EXIT_FAILURE
 			;;
 		esac
@@ -870,7 +911,7 @@ function parse_arguments ()
 	#+ Drawback: This might break things if $PACMAN is not pacman or
 	#+ powerpill.
 	elif [[ $sync_value == "-S"* && $(echo "$sync_value" \
-	| /usr/bin/grep "[c,g,h,i,l,s,w,p]")  ]]; then
+	| /usr/bin/grep "[c,g,h,i,l,s,w,p]") ]]; then
 		no_install=1
 	fi
 
@@ -992,7 +1033,9 @@ function check_updates ()
 	[[ -z $sync_value ]] && return
 
 	local tmp=""
-	
+
+	### UPDATE/REFRESH ###
+
 	# If refresh, well, refresh the database
 	if [[ $do_update -gt 0 ]]; then
 
@@ -1006,7 +1049,10 @@ function check_updates ()
 
 		# If --sync (or -S --opts), remove "--refresh, -y" and
 		#+ "--sysupgrade, -u" from the OPTS array
-		OPTS=( "${OPTS[*]//[--refresh,-y,--sysupgrade,-u]}" )
+		OPTS=( "${OPTS[*]//--refresh}" )
+		OPTS=( "${OPTS[*]//-y}" )
+		OPTS=( "${OPTS[*]//--sysupgrade}" )
+		OPTS=( "${OPTS[*]//-u}" )
 
 		if [[ $do_update -gt 1 ]]; then
 			/usr/bin/pacman $pacman_color ${OPTS[*]} "$sync_value" \
@@ -1016,6 +1062,8 @@ function check_updates ()
 			-y || exit $EXIT_FAILURE
 		fi
 	fi
+
+	### SYSTEM UPGRADE ###
 
 	if [[ $do_sysupgrade -eq 0 ]]; then
 		# If no sysupgrade and no packages to be installed (-Sy), 
@@ -1032,13 +1080,17 @@ function check_updates ()
 		fi
 	fi
 
+	# At this point, we know the user requested a system upgrade (but we
+	#+ stil don't know if there are actually available upgrades)
+
 	# Remove 'u' from sync options
 	if [[ $sync_value == "-S"* && $sync_value == *"u"* ]]; then
 		tmp="${sync_value//u}"
 		sync_value="$tmp"
 	fi
-	
-	OPTS=( "${OPTS[*]//[--sysupgrade,-u]}" )
+
+	OPTS=( "${OPTS[*]//--sysupgrade}" )
+	OPTS=( "${OPTS[*]//-u}" )
 
 	# Remove leading, trailing, and double spaces from OPTS
 	OPTS=( "${OPTS[*]##*( )}" )
@@ -1052,11 +1104,13 @@ function check_updates ()
 	fi
 
 	# Get pkgs to be upgraded
+	local ups=()
 	ups=( $(/usr/bin/pacman -Qu | /usr/bin/grep -v \
 	"\[ignored\]" | /usr/bin/awk '{print $1}') )
 
-	# If no upgrades and no packages to be installed, exit
+	# If no upgrades...
 	if [[ ${#ups[*]} -eq 0 ]]; then
+		# and no packages to be installed, exit
 		if [[ ${#PKGS[*]} -eq 0 ]]; then
 			echo -e "${green}[+]$nc There is nothing to do"
 			exit $EXIT_SUCCESS
@@ -1068,11 +1122,10 @@ function check_updates ()
 			return
 		fi
 	fi
-                                                                                
-	# At this point, $ups[] is always greater than zero: we have
-	#+ upgrades
 
-	# If only upgrading (no PKGS), set the only_upgrade flag to 1,
+	# At this point, we know there are upgrades
+
+	# If only upgrading (no pkgs to install), set the only_upgrade flag to 1,
 	#+ so that check_free() won't be executed
 	[[ ${#PKGS[*]} -eq 0 ]] && only_upgrade=1
 
@@ -1080,7 +1133,7 @@ function check_updates ()
 	for up in ${ups[*]}; do
 		PKGS[${#PKGS[*]}]="$up"
 	done
-	
+
 	# List upgrades
 	echo -e "${blue}::$nc$bold Available upgrades:$nc "
 	/usr/bin/pacman $pacman_color -Qu || exit $EXIT_FAILURE
@@ -1097,6 +1150,10 @@ function check_config ()
 	fi
 
 	[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
+	if [[ -z $user ]]; then
+		echoerr "${ME,,}: Unable to get current username"
+		exit $EXIT_FAILURE
+	fi
 
 	### GENERATE CONFIG FILES AND DIRECTORIES ###
 
@@ -1132,7 +1189,8 @@ color=true
 # checks would make $ME useless, it might be usefull in some cases
 check_rules=true
 check_free=true
-" | /usr/bin/sudo -u "$user" /usr/bin/tee "$CONFIG_FILE"
+" | /usr/bin/sudo -u "$user" /usr/bin/tee "$CONFIG_FILE" 1>/dev/null \
+|| exit $EXIT_FAILURE
 
 	/usr/bin/chmod 600 "$CONFIG_FILE"
 
@@ -1148,7 +1206,8 @@ check_free=true
 # Example:
 # core/filesystem
 # libre/licenses
-" | /usr/bin/sudo -u "$user" /usr/bin/tee  "$RULES_FILE"
+" | /usr/bin/sudo -u "$user" /usr/bin/tee "$RULES_FILE" 1>/dev/null \
+|| exit $EXIT_FAILURE
 
 	/usr/bin/chmod 600 "$RULES_FILE"
 
@@ -1161,8 +1220,8 @@ check_free=true
 	local rules_value=""
 	local free_value=""
 
-	full_bl_value=$(/usr/bin/grep "^full_blacklist=" \
-	"$CONFIG_FILE" | /usr/bin/cut -d"=" -f2)
+	full_bl_value="$(/usr/bin/grep "^full_blacklist=" \
+	"$CONFIG_FILE" | /usr/bin/cut -d"=" -f2)"
 
 	case $full_bl_value in
 		true) full_blacklist=1 ;;
@@ -1170,8 +1229,8 @@ check_free=true
 		*) full_blacklist=0 ;; # Default value
 	esac
 
-	PACMAN=$(/usr/bin/grep "^pac_man=" "$CONFIG_FILE" \
-	| /usr/bin/cut -d"=" -f2)
+	PACMAN="$(/usr/bin/grep "^pac_man=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)"
 
 	if [[ -z $PACMAN ]]; then
 		PACMAN="pacman"
@@ -1180,8 +1239,8 @@ check_free=true
 		exit $EXIT_FAILURE
 	fi
 
-	color=$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
-	| /usr/bin/cut -d"=" -f2)
+	color="$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)"
 
 	case $color in
 		true) color_ok=1 ;;
@@ -1196,8 +1255,8 @@ check_free=true
 		pacman_color="--color=never"
 	fi
 
-	rules_value=$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
-	| /usr/bin/cut -d"=" -f2)
+	rules_value="$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)"
 
 	case $rules_value in
 		true) rules_ok=1 ;;
@@ -1205,8 +1264,8 @@ check_free=true
 		*) rules_ok=1 ;;
 	esac
 
-	free_value=$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
-	| /usr/bin/cut -d"=" -f2)
+	free_value="$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
+	| /usr/bin/cut -d"=" -f2)"
 
 	case $free_value in
 		true) free_ok=1 ;;
@@ -1245,7 +1304,7 @@ function valid_pkg_name ()
 			tmp="${pkg_name%%>*}"
 			pkg_name="$tmp"
 		;;
-		
+
 		# No valid package expression ends or starts with a slash. 
 		#+ If there is a slash, it should be in the middle, like 
 		#+ "repo/pkg"
@@ -1254,10 +1313,12 @@ function valid_pkg_name ()
 
 	# Get pkg name in repo expressions: "repo/pkg"
 	if [[ $pkg_name == *'/'* ]]; then
+
 		# If there is a slash in the middle of the string, check
 		#+ it is not a filename
 		if [[ -e "$pkg_name" ]]; then
 			return $EXIT_FAILURE
+
 		# If not a filename, take whatever comes after the slash
 		#+ as the package name
 		else
@@ -1265,7 +1326,7 @@ function valid_pkg_name ()
 			pkg_name="$tmp"
 		fi
 	fi
-	
+
 	[[ -z "$pkg_name" ]] && return $EXIT_FAILURE
 
 	# Now perform the checks for package names validity
@@ -1367,7 +1428,7 @@ function main ()
 	#+ block only writes a zero to the file.
 	if [[ $do_sysupgrade -eq 1 && -f /tmp/updates ]]; then
 		echo "0" | /usr/bin/sudo -u "$user" \
-		/usr/bin/tee /tmp/updates &>/dev/null
+		/usr/bin/tee /tmp/updates 1>/dev/null
 	fi
 
 	### CHECK FOR UPDATES ###
@@ -1377,7 +1438,8 @@ function main ()
 	fi
 
 	# Remove duplicates, just in case
-	local tmp=( $(for i in ${PKGS[*]}; do echo "$i"; done \
+	local tmp=()
+	tmp=( $(for i in ${PKGS[*]}; do echo "$i"; done \
 	| /usr/bin/sort -u) )
 	PKGS=( ${tmp[*]} )
 	unset tmp
@@ -1400,7 +1462,7 @@ function main ()
 	### FIRE UP THE PACMAN ###
 
 	if [[ $do_sysupgrade -eq 1 ]]; then
-		if [[ ${#PKGS[*]} -eq 0 ]]; then
+		if [[ $only_upgrade -eq 1 ]]; then
 			echo -e "${blue}::$nc$bold Starting full system" \
 					"upgrade...$nc"
 		else
@@ -1409,10 +1471,8 @@ function main ()
 		fi
 	fi
 
-	if ! /usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
-	${PKGS[*]}; then
-		exit $EXIT_FAILURE
-	fi
+	/usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
+	${PKGS[*]} || exit $EXIT_FAILURE
 
 #	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value ${PKGS[*]}"
 }
