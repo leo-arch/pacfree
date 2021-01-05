@@ -666,7 +666,7 @@ function upgrade_me ()
 	local upstream_version=""
 
 	upstream_version="$(/usr/bin/curl -s "$RAW_URL" \
-	| /usr/bin/grep "VERSION=" | /usr/bin/cut -d'=' -f2 \
+	| /usr/bin/grep ^"VERSION=" | /usr/bin/cut -d'=' -f2 \
 	| /usr/bin/sed 's/"//g')"
 
 	if [[ -z $upstream_version ]]; then
