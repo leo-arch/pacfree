@@ -51,7 +51,7 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.7"
+VERSION="0.4.8"
 AUTHOR="L. Abramovich"
 DATE="Jan 5, 2021"
 LICENSE="GPL2+"
@@ -441,6 +441,46 @@ function download_blacklist_aur ()
 
 ################################
 
+function extra_alternatives ()
+{
+	local pkg=""
+	local alternative_b=""
+
+	pkg="$1"
+
+	case $pkg in
+
+		firefox|"firefox-dev"*|"firefox-i18n"*\
+		|"firefox-beta"*|opera|chromium|"chromium-browser"*\
+		|"google-chrome"*|vivaldi|falkon|seamonkey)
+			alternative_b="icecat, iceweasel"
+		;;
+
+		"virtualbox"*|vmware-workstation) alternative_b="qemu" ;;
+
+		"acroread"*|foxitreader) alternative_b="mupdf-gl" ;;
+
+		dropbox) alternative_b="nextcloud" ;;
+
+		atom|electron) alternative_b="eclipse, geany" ;;
+
+		"nvidia"*) alternative_b="xf86-video-nouveau" ;;
+
+		wps-office) alternative_b="libreoffice-fresh" ;;
+
+		acetoneiso2) alternative_b="brasero, graveman, simpleburn" ;;
+
+		clonezilla) alternative_b="mondo, partclone, partimage" ;;
+
+		krusader) alternative_b="mc (from [libre])" ;;
+
+	esac
+
+	echo "$alternative_b"
+}
+
+################################
+
 function check_free ()
 {
 	[[ ${#PKGS[*]} -eq 0 ]] && return
@@ -449,6 +489,8 @@ function check_free ()
 	local repo=""
 	local pkg=""
 	local blacklisted=""
+	local alternative=""
+	local description=""
 
 	echo -e "${blue}::$nc$bold Checking packages against the" \
 			"blacklist... $nc"
@@ -493,27 +535,31 @@ function check_free ()
 		blacklisted="$(/usr/bin/grep "^${pkg}:" "$BLACKLIST_FILE" \
 		2>/dev/null)"
 
-		# If using some pac-man able to install packages from the
-		#+ AUR, like yay or trizen, we need to check the AUR
-		#+ blacklist as well
-		if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
-			if [[ -z $blacklisted ]]; then
-				blacklisted="$(/usr/bin/grep "^${pkg}:" \
-				"$BLACKLIST_FILE_AUR" 2>/dev/null)"
-			fi
+		# If the package is not blacklisted, and if some unofficial
+		#+ repo is enabled, check the AUR blacklist as well
+		if [[ -z $blacklisted && $unofficial_repos -eq 1 ]]; then
+			blacklisted="$(/usr/bin/grep "^${pkg}:" \
+			"$BLACKLIST_FILE_AUR" 2>/dev/null)"
 		fi
 
 		if [[ -n $blacklisted ]]; then
 
-			# If blacklisted, get alternative pkg
+			# If blacklisted, get description and alternative pkg, if any
+			description="$(echo "$blacklisted" | /usr/bin/cut -d":" -f5)"
 			alternative="$(echo "$blacklisted" \
 			| /usr/bin/cut -d":" -f2)"
+
+			# Parabola's blacklists lack alternative packages for non-free
+			#+ soft that indeed has an alternative libre version. Here I add
+			#+ a few of them for some popular packages
+			if [[ -z $alternative ]]; then
+				alternative="$(extra_alternatives "$pkg")"
+			fi
+
 			echo -e "\n$nc$bold'$pkg'$nc is a ${red}non-free$nc" \
 					"package\n$nc${bold}Description${nc}:" \
-					"$blacklisted\n$nc${bold}Alternative" \
-					"package${nc}:" \
-					"$([[ $alternative ]] && echo "$alternative" \
-					|| echo "none")"
+					"$description\n$nc${bold}Alternative" \
+					"package${nc}: $alternative"
 
 			local answer="."
 			local msg=""
@@ -1353,12 +1399,30 @@ function valid_pkg_name ()
 	fi
 }
 
+################################
+
+function check_unofficial_repos ()
+{
+	# Remove official repos from the repos list. If something remains,
+	#+ it's unofficial 
+	if /usr/bin/grep "^\[" /etc/pacman.conf \
+	| /usr/bin/grep -qv "options\|core\|extra\|community*\|multilib*\|testing\|gnome-unstable\|kde-unstable"; then
+		unofficial_repos=1
+
+	# Pacman wrappers like yay or trizen can install packages from the
+	#+ AUR, which, of course, is unofficial.
+	elif [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
+		unofficial_repos=1
+	fi
+}
+
+########################################################################
 
 						#####################
 						#       MAIN        #
 						#####################
 
-################################
+########################################################################
 
 function main ()
 {
@@ -1379,6 +1443,10 @@ function main ()
 	# Catch "-y,--refresh" and "-u,--sysupgrade" options
 	do_update=0
 	do_sysupgrade=0
+	# Is the user using some unofficial repo or some package manager
+	#+ able to install packages from the AUR? In this case, we should
+	#+ use the AUR blacklist as well
+	unofficial_repos=0
 
 	## Config file options ##
 
@@ -1407,13 +1475,10 @@ function main ()
 	#+ and libre repositories ###
 	check_added_functions ${p[*]}
 
-	### DOWNLOAD THE BLACKLIST(S) ###
+	### DOWNLOAD THE BLACKLISTS ###
 	download_blacklist
-	# If using something like yay or trizen, we need the AUR
-	#+ blacklist as well
-	if [[ $PACMAN != "pacman" && $PACMAN != "powerpill" ]]; then
-		download_blacklist_aur
-	fi
+	check_unofficial_repos
+	[[ $unofficial_repos -eq 1 ]] && download_blacklist_aur
 
 	# If no operation is specified, but only package(s), -Syu
 	#+ is assumed
