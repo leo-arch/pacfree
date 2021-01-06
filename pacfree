@@ -398,7 +398,7 @@ function download_blacklist ()
 		else
 			/usr/bin/sudo -u "$user" /usr/bin/cp \
 			/tmp/blacklist_full "$BLACKLIST_FILE" \
-			|| exit $EXIT_FAILURE 
+			|| exit $EXIT_FAILURE
 
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		fi
@@ -500,7 +500,7 @@ function check_free ()
 
 	for (( i=0;i<${#PKGS[*]};i++ )); do
 
-		repo=""; pkg=""
+		repo=""; pkg=""; aur=0
 		# If repo/pkg get the two values
 		if [[ ${PKGS[$i]} == *"/"* ]]; then
 			repo=${PKGS[$i]%%/*}
@@ -1139,7 +1139,7 @@ function check_updates ()
 	### SYSTEM UPGRADE ###
 
 	if [[ $do_sysupgrade -eq 0 ]]; then
-		# If no sysupgrade and no packages to be installed (-Sy), 
+		# If no sysupgrade and no packages to be installed (-Sy),
 		#+ there is nothing else to do
 
 		if [[ ${#PKGS[*]} -eq 0 \
@@ -1365,7 +1365,7 @@ function valid_pkg_name ()
 	[[ ${#res} -gt 1 ]] && return $EXIT_FAILURE
 
 	local tmp=""
-	case $pkg_name in 
+	case $pkg_name in
 
 		# Get pkg name in version expressions: "foo>1.2.3"
 		*'<'*)
@@ -1378,8 +1378,8 @@ function valid_pkg_name ()
 			pkg_name="$tmp"
 		;;
 
-		# No valid package expression ends or starts with a slash. 
-		#+ If there is a slash, it should be in the middle, like 
+		# No valid package expression ends or starts with a slash.
+		#+ If there is a slash, it should be in the middle, like
 		#+ "repo/pkg"
 		'/'*|*'/') return $EXIT_FAILURE ;;
 	esac
@@ -1431,7 +1431,7 @@ function valid_pkg_name ()
 function check_unofficial_repos ()
 {
 	# Remove official repos from the repos list. If something remains,
-	#+ it's unofficial 
+	#+ it's unofficial
 	if /usr/bin/grep "^\[" /etc/pacman.conf \
 	| /usr/bin/grep -qv "options\|core\|extra\|community*\|multilib*\|testing\|gnome-unstable\|kde-unstable"; then
 		unofficial_repos=1
