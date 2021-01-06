@@ -86,7 +86,9 @@ function echoerr ()
 
 function help ()
 {
-	local arg="$1"
+	# $arg will be local and readonly
+	declare -r arg="$1"
+
 	case $arg in
 		help)
 
@@ -111,7 +113,7 @@ function help ()
 
 echo -e "\n$ME specific operations:
     ${ME,,} [package(s)]
-    ${ME,,} {-f --check-free}
+    ${ME,,} {-f --check-free} [package(s)]
     ${ME,,} {-l --list-rules}
     ${ME,,} {-a --add-rule}   <rule(s)>
     ${ME,,} {-L --add-libre}
@@ -152,7 +154,7 @@ provided in parentheses and is always the recommended way to go):
     download (-Sw)
     help (-h)
     version (-V)
-    history (cat /var/log/pacman.log)"
+    history [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)"
 		;;
 
 		checkfree)
@@ -210,9 +212,7 @@ function check_sys_free ()
 		fi
 
 	else
-		local nonfree=0
-		local aur=0
-		local colorize="--color=always"
+		local nonfree=0 aur=0 colorize="--color=always"
 
 		[[ $color_ok -eq 0 ]] && colorize="--color=never"
 
@@ -243,7 +243,7 @@ function check_sys_free ()
 		unset GREP_COLORS
 
 		if [[ nonfree -eq 0 ]]; then
-			echo -e "\n${green}[+]$nc No non-free/libre package" \
+			echo -e "\n${green}[+]$nc No non-free/libre packages" \
 					"found. RMS smiles!"
 		else
 			echo -e "\n${red}[-]$nc $nonfree non-free/libre" \
@@ -261,8 +261,7 @@ function check_sys_free ()
 
 function add_libre_repos ()
 {
-	local missing_repo=0
-	local libre_repos=()
+	local missing_repo=0 libre_repos=()
 
 	for x in libre libre-multilib pcr kernels cross nonprism; do
 		if [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
@@ -403,7 +402,7 @@ function download_blacklist ()
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		fi
 	else
-#		echoerr "\n${red}[-]$nc Error: try again"
+#		echoerr "${ME,,}: Error downloading file"
 		exit $EXIT_FAILURE
 	fi
 }
@@ -431,7 +430,7 @@ function download_blacklist_aur ()
 		echo -e "${green}OK$nc"
 
 	else
-#		echoerr "\n${red}[-]$nc Error: try again"
+#		echoerr "${ME,,}: Error downloading file"
 		exit $EXIT_FAILURE
 	fi
 }
@@ -440,10 +439,8 @@ function download_blacklist_aur ()
 
 function extra_alternatives ()
 {
-	local pkg=""
 	local alternative_b=""
-
-	pkg="$1"
+	declare -r pkg="$1"
 
 	case $pkg in
 
@@ -480,23 +477,19 @@ function extra_alternatives ()
 
 function check_free ()
 {
-	# Check if called from the command line as '-f pkgs(s)'
+	# Check if called from the command line, namely, as '-f pkgs(s)'
 	local external=0
 	[[ -n $1 ]] && external=1
 
 	[[ ${#PKGS[*]} -eq 0 ]] && return
 
-	local pkgs_counter=${#PKGS[*]}
-	local repo=""
-	local pkg=""
-	local blacklisted=""
-	local alternative=""
-	local description=""
-	local aur=0
-	local source=""
+	local pkgs_counter=${#PKGS[*]} repo="" pkg="" blacklisted="" \
+	alternative="" description="" aur=0 source=""
 
-	echo -e "${blue}::$nc$bold Checking packages against the" \
-			"blacklist... $nc"
+	if [[ $external -eq 0 ]]; then
+		echo -e "${blue}::$nc$bold Checking packages against the" \
+				"blacklist... $nc"
+	fi
 
 	for (( i=0;i<${#PKGS[*]};i++ )); do
 
@@ -562,15 +555,16 @@ function check_free ()
 
 			[[ aur -eq 0 ]] && source="official" || source="AUR"
 
-			echo -e "\n$nc$bold'$pkg'$nc ($source) is a ${red}non-free$nc" \
+			echo -e "$nc$bold'$pkg'$nc ($source) is a ${red}non-free$nc" \
 					"package\n$nc${bold}Description${nc}:" \
 					"$description\n$nc${bold}Alternative" \
 					"package${nc}: $alternative"
 
-			# Ask only if not called from the command line
+			[[ $external -eq 1 ]] && echo ""
+
+			# Ask only if not called via -f
 			if [[ $external -eq 0 ]]; then
-				local answer="."
-				local msg=""
+				local answer="." msg=""
 				msg=$(echo -e "${blue}::$nc$bold Do you want to install" \
 					  "'${PKGS[$i]}' anyway? [y/N]$nc ")
 
@@ -590,9 +584,9 @@ function check_free ()
 			fi
 
 		else
-			# Only if called from the command line
-			if [[ $external -eq 1 && -z $blacklisted ]]; then
-				echo -e "\n$nc${bold}'${PKGS[$i]}'$nc is ${green}not" \
+			# Only if called via -f
+			if [[ $external -eq 1 ]]; then
+				echo -e "$nc${bold}'${PKGS[$i]}'$nc is ${green}not" \
 						"blacklisted$nc"
 			fi
 		fi
@@ -603,7 +597,7 @@ function check_free ()
 	# If no pkg left after this check, just exit
 	[[ $pkgs_counter -eq 0 ]] && exit $EXIT_SUCCESS
 
-	# If no blacklisted package, $blacklisted will be emtpy
+	# If no blacklisted packages found, $blacklisted will be emtpy
 	if [[ -z $blacklisted ]]; then
 		echo -e "${green} ->$nc No blacklisted packages found"
 	fi
@@ -613,17 +607,17 @@ function check_free ()
 
 function list_rules ()
 {
-	local rules=()
-	local rule=""
+	local rules=() rule=""
 
 	rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
 
-	if [[ ${#rules[*]} -gt 0 ]]; then
+	if [[ ${#rules[*]} -gt 100 ]]; then
 		for rule in ${rules[*]}; do
 			echo -e "$nc${bold}${rule%%/*}/${green}${rule##*/}$nc"
 		done
 	else
-		echo -e "${yellow}[*]$nc No rules found"
+		echo -e "${ME,,}: No rules found (use '${ME,,} -a repo/pkg' to" \
+				"add new rules)"
 	fi
 }
 
@@ -669,7 +663,12 @@ function check_added_functions ()
 	case "$1" in
 
 		# Modified version of pacman help (B)
-		""|-h|--help)
+		"")
+			echoerr "${ME,,}: No operation specified (try '${ME,,} --help')"
+			exit $EXIT_FAILURE
+		;;
+
+		-h|--help)
 			help "help"
 			exit $EXIT_SUCCESS
 		;;
@@ -735,7 +734,7 @@ function upgrade_me ()
 		exit $EXIT_FAILURE
 	fi
 
-	local RAW_URL="https://raw.githubusercontent.com/leo-arch/pacfree/master/pacfree"
+	declare -r RAW_URL="https://raw.githubusercontent.com/leo-arch/pacfree/master/pacfree"
 	local upstream_version=""
 
 	upstream_version="$(/usr/bin/curl -s "$RAW_URL" \
@@ -759,7 +758,7 @@ function upgrade_me ()
 
 function list_repos ()
 {
-	local PACMAN_CONF_FILE="/etc/pacman.conf"
+	declare -r PACMAN_CONF_FILE="/etc/pacman.conf"
 
 	if ! [[ -f $PACMAN_CONF_FILE ]]; then
 		echoerr "${ME,,}: ${PACMAN_CONF_FILE}: No such file or" \
@@ -772,7 +771,7 @@ function list_repos ()
 			if /usr/bin/grep -q "^\[${i}\]" "$PACMAN_CONF_FILE"; then
 				echo -e "${green}[+]$nc [${i}]: Found"
 			else
-				echo -e "${red}[-]$nc [${i}]: Not found"
+				echo -e "${red}[-]$nc [${i}]: No such repository"
 			fi
 		done
 	else
@@ -787,12 +786,11 @@ function list_repos ()
 function add_rules ()
 {
 	if [[ -z $1 ]]; then
-		echoerr "${ME,,}: No rule specfied"
+		echoerr "${ME,,}: No rule specfied (try '${ME,,} -a --help')"
 		exit $EXIT_FAILURE
 	fi
 
-	local repo=""
-	local rule=""
+	local repo="" rule=""
 
 	for rule in "$@"; do
 		repo=""
@@ -802,12 +800,12 @@ function add_rules ()
 
 			if ! [[ $(/usr/bin/pacman-conf -r "$repo" \
 			2>/dev/null) ]]; then
-				echoerr "${red}[-]$nc '${repo}': No such repository"
+				echoerr "${ME,,}: '${repo}': No such repository"
 				continue
 			fi
 		else
-			echoerr "${red}[-]$nc '${rule}': A repository must be" \
-					"specified"
+			echoerr "${ME,,}: '${rule}': A repository must be" \
+					"specified. Example: 'repo/${rule}'"
 			continue
 		fi
 
@@ -818,7 +816,7 @@ function add_rules ()
 			echo -e "${green}[+]$nc '${rule}': New rule successfully" \
 					"added"
 		else
-			echoerr "${red}[-]$nc '${rule}': Rule already exists"
+			echoerr "${ME,,}: '${rule}': Rule already exists"
 			continue
 		fi
 	done
@@ -828,7 +826,7 @@ function add_rules ()
 
 function print_logs ()
 {
-	local LOG_FILE="/var/log/pacman.log"
+	declare -r LOG_FILE="/var/log/pacman.log"
 
 	if [[ -z $1 ]]; then
 		if ! /usr/bin/cat "$LOG_FILE"; then
@@ -836,13 +834,21 @@ function print_logs ()
 		fi
 
 	else
-		local args=( "$@" )
-		local pkgs=""
-		# Transform "pkg1 pkg2 pkg3" into this string
-		#+ "pkg1\|pkg2\|pkg3" to be used by grep
-		pkgs="$(echo "${args[*]}" | /usr/bin/sed 's/ /\\|/g')"
+		local args=() pkgs="" grep_color=""
+		args=( "$@" )
+		for (( i=0;i<${#args[*]};i++)); do
+			[[ $i -eq 0 ]] && pkgs="${args[$i]}" && continue
+			[[ ${args[$i]} == "-"* ]] && continue
+			pkgs="${pkgs}\|${args[$i]}"
+		done
 
-		if ! /usr/bin/grep "$pkgs" "$LOG_FILE"; then
+		if [[ $color_ok -eq 1 ]]; then
+			grep_color="--color=always"
+		else
+			grep_color="--color=never"
+		fi
+
+		if ! /usr/bin/grep "$grep_color" "$pkgs" "$LOG_FILE"; then
 			exit $EXIT_FAILURE
 		fi
 	fi
@@ -935,11 +941,12 @@ function parse_arguments ()
 		esac
 
 		# Use a second case statement to be able to catch the string
-		#+ (possibily) modified in the previous case statement
+		#+ (possibily) modified by the previous case statement
 		case ${p[$i]} in
 
 			# Catch sync, refresh (-y) and sysupgrade (-u) options
-			# Increment do_update to catch -yy
+
+			# Increment do_update to intercept -yy
 			--refresh|-y) (( do_update++ )) ;;
 
 			--sysupgrade|-u) do_sysupgrade=1 ;;
@@ -1023,10 +1030,7 @@ function check_rules ()
 {
 	[[ ${#PKGS[*]} -eq 0 ]] && return
 
-	local rules=()
-	local RULED_PKGS=()
-	local pkg_name=""
-	local pkg_version=""
+	local rules=() RULED_PKGS=() pkg_name="" pkg_version=""
 
 	### LOAD REPO RULES ###
 
@@ -1185,7 +1189,7 @@ function check_updates ()
 	if [[ ${#ups[*]} -eq 0 ]]; then
 		# and no packages to be installed, exit
 		if [[ ${#PKGS[*]} -eq 0 ]]; then
-			echo -e "${green}[+]$nc There is nothing to do"
+			echo "There is nothing to do"
 			exit $EXIT_SUCCESS
 		else
 			if [[ $do_sysupgrade -eq 1 ]]; then
@@ -1207,7 +1211,7 @@ function check_updates ()
 		PKGS[${#PKGS[*]}]="$up"
 	done
 
-	# List upgrades
+	# And finally, list available upgrades
 	echo -e "${blue}::$nc$bold Available upgrades:$nc "
 	/usr/bin/pacman $pacman_color -Qu || exit $EXIT_FAILURE
 }
@@ -1252,7 +1256,7 @@ function check_config ()
 # technical issues from the blacklist
 full_blacklist=false
 
-# Define you package manager, say pacman or powerpill or yay
+# Define your package manager, say 'pacman' or 'powerpill' or 'yay'
 pac_man=pacman
 
 # Colorize output
@@ -1275,7 +1279,7 @@ check_free=true
 # Add here repository rules for packages, one per line, in the
 # form 'repo/pkg' (blank and commented lines are ommited). Packages
 # listed here will always be installed/upgraded from the specified
-# repository (disregarding its place in pacman config file).
+# repository (disregarding its place in the pacman configuration file).
 # Example:
 # core/filesystem
 # libre/licenses
@@ -1288,10 +1292,7 @@ check_free=true
 
 	### READ THE CONFIG FILE ###
 
-	local full_bl_value=""
-	local color=""
-	local rules_value=""
-	local free_value=""
+	local full_bl_value="" color="" rules_value="" free_value=""
 
 	full_bl_value="$(/usr/bin/grep "^full_blacklist=" \
 	"$CONFIG_FILE" | /usr/bin/cut -d"=" -f2)"
@@ -1357,14 +1358,13 @@ function valid_pkg_name ()
 #+ Names are not allowed to start with hyphens or dots. All letters
 #+ should be lowercase."
 
-	local pkg_name="$1"
+	local pkg_name="$1" res="" tmp=""
 
 	# At most, a package expression could contain 1 slash, like in
 	#+ "repo/pkg". If more than one, it's not a valid expression
-	local res=${pkg_name//[^\/]}
+	res=${pkg_name//[^\/]}
 	[[ ${#res} -gt 1 ]] && return $EXIT_FAILURE
 
-	local tmp=""
 	case $pkg_name in
 
 		# Get pkg name in version expressions: "foo>1.2.3"
