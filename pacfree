@@ -51,9 +51,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.4.9"
+VERSION="0.5.0"
 AUTHOR="L. Abramovich"
-DATE="Jan 5, 2021"
+DATE="Jan 6, 2021"
 LICENSE="GPL2+"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -1502,16 +1502,19 @@ function main ()
 	#+ and libre repositories ###
 	check_added_functions ${p[*]}
 
-	### DOWNLOAD THE BLACKLISTS ###
-	download_blacklist
-	check_unofficial_repos
-	[[ $unofficial_repos -eq 1 ]] && download_blacklist_aur
-
 	# If no operation is specified, but only package(s), -Syu
 	#+ is assumed
 	if [[ ${#OPTS[*]} -eq 0 && -z $sync_value ]]; then
 		sync_value="-Syu"
 		no_install=0
+	fi
+
+	### DOWNLOAD THE BLACKLISTS ###
+	# Only if there is something to install and/or upgrade
+	if [[ -n $sync_value && $no_install -eq 0 ]]; then
+		download_blacklist
+		check_unofficial_repos
+		[[ $unofficial_repos -eq 1 ]] && download_blacklist_aur
 	fi
 
 	# This block is only for my personal configuration. You can
@@ -1529,10 +1532,10 @@ function main ()
 		check_updates
 	fi
 
-	# Remove duplicates, just in case
+	# Remove duplicated packages, just in case
 	local tmp=()
 	tmp=( $(for i in ${PKGS[*]}; do echo "$i"; done \
-	| /usr/bin/sort -u) )
+	| /usr/bin/sort -mu) )
 	PKGS=( ${tmp[*]} )
 	unset tmp
 
