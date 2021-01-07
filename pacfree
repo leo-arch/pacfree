@@ -51,7 +51,7 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.1"
+VERSION="0.5.2"
 AUTHOR="L. Abramovich"
 DATE="Jan 7, 2021"
 LICENSE="GPL2+"
@@ -124,7 +124,7 @@ Use '${ME,,} {-h --help}' with an operation for available options
 
 If no operation is specified, but only packages, -Syu is assumed
 
-Use --color=never to disable colored output
+Use --color=never or -nc to disable colored output
 
 For those users coming from Debian/RedHat based systems, the following \
 APT/DNF syntax (and its abbreviated form) is recognized (the pacman/${ME,,} \
@@ -143,20 +143,23 @@ go):
     list-installed-deps,lid (-Qd)
     list-no-required,lnr (-Qt)
     list-updates,lu (sudo pacman -Sy && pacman -Qu)
-    list-repos,lr ('pacfree -r' or 'pacman-conf -l' )
     info,n (-Qi)
     info-remote,nr (-Si)
     list-files,lf (-Ql)
     provides,p (-Qo)
     provides-remote,pr (-F)
     check,k (-Qk)
-    check-free,cf (pacfree -f)
     clean,c (-Sc)
     clean-all,ca (-Scc)
     download,d (-Sw)
-    help,h (-h)
-    version,v (-V)
-    history,l [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)"
+    history,logs,l [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)
+    list-repos,lr ('pacfree -r' or 'pacman-conf -l' )
+    check-free,cf (pacfree -f)
+    list-rules,lr (pacfree -l)
+    add-rule,ar (pacfree -a)
+    add-libre,al (pacfree -L)
+    help (-h)
+    version (-V)"
 		;;
 
 		checkfree)
@@ -611,7 +614,7 @@ function list_rules ()
 
 	rules=( $(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null) )
 
-	if [[ ${#rules[*]} -gt 100 ]]; then
+	if [[ ${#rules[*]} -gt 0 ]]; then
 		for rule in ${rules[*]}; do
 			echo -e "$nc${bold}${rule%%/*}/${green}${rule##*/}$nc"
 		done
@@ -860,20 +863,35 @@ function parse_arguments ()
 {
 	local sync_index=-1
 
-	# If color is explicitly disabled in command line,
-	#+ overwrite the config file value.
-	if [[ ${p[*]} == *"--color=never"* ]]; then
-		yellow=""; green=""; red=""; blue=""; bold=""; nc=""
-		pacman_color="--color=never"; color_ok=0
-	fi
-
 	# Process arguments
 	for (( i=0;i<${#p[*]};i++ )); do
 
 		case ${p[$i]} in
 
+			# Handle color
+			"--color="*)
+				case ${p[$i]##*=} in
+					never)
+						yellow=""; green=""; red=""; blue=""; bold=""
+						nc=""; pacman_color="--color=never"; color_ok=0
+					;;
+					always) pacman_color="--color=always"; color_ok=1 ;;
+					auto) pacman_color="--color=auto"; color_ok=1 ;;
+					*) pacman_color="--color=auto"; color_ok=1 ;;
+				esac
+
+				p[$i]=""
+			;;
+
+			-nc) # Short for --color=never
+				p[$i]=""; yellow=""; green=""; red=""; blue=""; bold=""
+				nc=""; pacman_color="--color=never"; color_ok=0
+			;;
+
 			# Allow some APT/DNF syntax for users coming from
 			#+ Debian/RedHat based systems.
+
+			# Pacman operations
 			install|i) p[$i]="-S" ;;
 			install-local|il) p[$i]="-U" ;;
 			remove|r) p[$i]="-Rns" ;;
@@ -895,6 +913,11 @@ function parse_arguments ()
 			clean-all|ca) p[$i]="-Scc" ;;
 			download|d) p[$i]="-Sw" ;;
 
+			# Pacfree operations
+			list-rules|lr) p[$i]="-l" ;;
+			add-rule|ar) p[$i]="-a" ;;
+			add-libre|al) p[$i]="-L" ;;
+			list-repos|lr) p[$i]="-r" ;;
 			check-free|cf) p[$i]="-f" ;;
 
 			list-updates|lu)
@@ -918,19 +941,15 @@ function parse_arguments ()
 				exit $EXIT_SUCCESS
 			;;
 
-			list-repos|lr)
-				list_repos ${p[*]:1}
-				exit $EXIT_SUCCESS
-			;;
-			help|h)
+			help)
 				help "help"
 				exit $EXIT_SUCCESS
 			;;
-			version|v)
+			version)
 				print_version
 				exit $EXIT_SUCCESS
 			;;
-			history|l)
+			history|logs|l)
 				print_logs ${p[*]:1}
 				exit $EXIT_SUCCESS
 			;;
@@ -1252,7 +1271,7 @@ function check_config ()
 # technical issues from the blacklist
 full_blacklist=false
 
-# Define your package manager, say 'pacman' or 'powerpill' or 'yay'
+# Define your package manager, say 'pacman' or 'powerpill' or 'yay', etc.
 pac_man=pacman
 
 # Colorize output
