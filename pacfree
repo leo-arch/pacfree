@@ -51,9 +51,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.0"
+VERSION="0.5.1"
 AUTHOR="L. Abramovich"
-DATE="Jan 6, 2021"
+DATE="Jan 7, 2021"
 LICENSE="GPL2+"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -127,34 +127,36 @@ If no operation is specified, but only packages, -Syu is assumed
 Use --color=never to disable colored output
 
 For those users coming from Debian/RedHat based systems, the following \
-APT/DNF syntax is recognized (the pacman/${ME,,} equivalent is \
-provided in parentheses and is always the recommended way to go):
+APT/DNF syntax (and its abbreviated form) is recognized (the pacman/${ME,,} \
+equivalent is provided in parentheses and is always the recommended way to \
+go):
 
-    install (-Syu)
-    install-local (-U)
-    remove (-Rns)
-    update/refresh (-Sy)
-    upgrade/sysupgrade (-Syu)
-    search (-Ss)
-    list-installed (-Qe)
-    list-installed-native (-Qen)
-    list-installed-foreign (-Qem)
-    list-installed-deps (-Qd)
-    list-updates (sudo pacman -Sy && pacman -Qu)
-    list-repos ('pacfree -r' or 'pacman-conf -l' )
-    info (-Qi)
-    info-remote (-Si)
-    list-files (-Ql)
-    provides (-Qo)
-    provides-remote (-F)
-    check (-Qk)
-    check-free (pacfree -f)
-    clean (-Sc)
-    clean-all (-Scc)
-    download (-Sw)
-    help (-h)
-    version (-V)
-    history [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)"
+    install,i (-S)
+    install-local,il (-U)
+    remove,r (-Rns)
+    update,refresh,u (-Sy)
+    upgrade,sysupgrade,s (-Syu)
+    search,query,q (-Ss)
+    list-installed,li (-Qe)
+    list-installed-native,lin (-Qen)
+    list-installed-foreign,lif (-Qem)
+    list-installed-deps,lid (-Qd)
+    list-no-required,lnr (-Qt)
+    list-updates,lu (sudo pacman -Sy && pacman -Qu)
+    list-repos,lr ('pacfree -r' or 'pacman-conf -l' )
+    info,i (-Qi)
+    info-remote,ir (-Si)
+    list-files,lf (-Ql)
+    provides,p (-Qo)
+    provides-remote,pr (-F)
+    check,k (-Qk)
+    check-free,cf (pacfree -f)
+    clean,c (-Sc)
+    clean-all,ca (-Scc)
+    download,d (-Sw)
+    help,h (-h)
+    version,v (-V)
+    history,l [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)"
 		;;
 
 		checkfree)
@@ -555,12 +557,10 @@ function check_free ()
 
 			[[ aur -eq 0 ]] && source="official" || source="AUR"
 
-			echo -e "$nc$bold'$pkg'$nc ($source) is a ${red}non-free$nc" \
-					"package\n$nc${bold}Description${nc}:" \
-					"$description\n$nc${bold}Alternative" \
-					"package${nc}: $alternative"
-
-			[[ $external -eq 1 ]] && echo ""
+			echo -e "$nc$bold$pkg$nc ($source) is a ${red}non-free$nc" \
+					"package\n   Description:" \
+					"$description\n   Free/libre alternative:" \
+					"$alternative"
 
 			# Ask only if not called via -f
 			if [[ $external -eq 0 ]]; then
@@ -584,9 +584,9 @@ function check_free ()
 			fi
 
 		else
-			# Only if called via -f
+			# Print the message only if called via -f
 			if [[ $external -eq 1 ]]; then
-				echo -e "$nc${bold}'${PKGS[$i]}'$nc is ${green}not" \
+				echo -e "$nc${bold}${PKGS[$i]}$nc is ${green}not" \
 						"blacklisted$nc"
 			fi
 		fi
@@ -874,34 +874,30 @@ function parse_arguments ()
 
 			# Allow some APT/DNF syntax for users coming from
 			#+ Debian/RedHat based systems.
-			install) p[$i]="-Syu" ;;
-			install-local) p[$i]="-U" ;;
-			remove) p[$i]="-Rns" ;;
-			update|refresh) p[$i]="-Sy" ;;
-			upgrade|sysupgrade) p[$i]="-Syu" ;;
-			search) p[$i]="-Ss" ;;
-			list-installed) p[$i]="-Qe" ;;
-			list-installed-native) p[$i]="-Qen" ;;
-			list-installed-foreign) p[$i]="-Qem" ;;
-			list-installed-deps) p[$i]="-Qd" ;;
-			info) p[$i]="-Qi" ;;
-			info-remote) p[$i]="-Si" ;;
-			list-files) p[$i]="-Ql" ;;
-			provides) p[$i]="-Qo" ;;
-			provides-remote) p[$i]="-F" ;;
-			check) p[$i]="-Qk" ;;
-			clean) p[$i]="-Sc" ;;
-			clean-all) p[$i]="-Scc" ;;
-			download) p[$i]="-Sw" ;;
+			install|i) p[$i]="-S" ;;
+			install-local|il) p[$i]="-U" ;;
+			remove|r) p[$i]="-Rns" ;;
+			update|refresh|u) p[$i]="-Sy" ;;
+			upgrade|sysupgrade|s) p[$i]="-Syu" ;;
+			search|query|q) p[$i]="-Ss" ;;
+			list-installed|li) p[$i]="-Qe" ;;
+			list-installed-native|lin) p[$i]="-Qen" ;;
+			list-installed-foreign|lif) p[$i]="-Qem" ;;
+			list-installed-deps|lid) p[$i]="-Qd" ;;
+			list-no-required|lnr) p[$i]="-Qt" ;;
+			info|i) p[$i]="-Qi" ;;
+			info-remote|ir) p[$i]="-Si" ;;
+			list-files|lf) p[$i]="-Ql" ;;
+			provides|p) p[$i]="-Qo" ;;
+			provides-remote|pr) p[$i]="-F" ;;
+			check|k) p[$i]="-Qk" ;;
+			clean|c) p[$i]="-Sc" ;;
+			clean-all|ca) p[$i]="-Scc" ;;
+			download|d) p[$i]="-Sw" ;;
 
-			check-free)
-				download_blacklist
-				download_blacklist_aur
-				check_sys_free
-				exit $EXIT_SUCCESS
-			;;
+			check-free|cf) p[$i]="-f" ;;
 
-			list-updates)
+			list-updates|lu)
 				if [[ $(type -P /usr/bin/checkupdates) ]]; then
 
 					echo -e "${blue}::$nc$bold Checking available" \
@@ -922,19 +918,19 @@ function parse_arguments ()
 				exit $EXIT_SUCCESS
 			;;
 
-			list-repos)
+			list-repos|lr)
 				list_repos ${p[*]:1}
 				exit $EXIT_SUCCESS
 			;;
-			help)
+			help|h)
 				help "help"
 				exit $EXIT_SUCCESS
 			;;
-			version)
+			version|v)
 				print_version
 				exit $EXIT_SUCCESS
 			;;
-			history)
+			history|l)
 				print_logs ${p[*]:1}
 				exit $EXIT_SUCCESS
 			;;

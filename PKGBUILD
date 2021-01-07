@@ -1,7 +1,7 @@
 # Maintainer: archcrack <johndoe.arch@outlook.com>
 
 pkgname=pacfree
-pkgver=0.5.0
+pkgver=0.5.1
 pkgrel=1
 pkgdesc="Make pacman free-software aware"
 arch=(any)
