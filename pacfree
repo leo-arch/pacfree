@@ -144,8 +144,8 @@ go):
     list-no-required,lnr (-Qt)
     list-updates,lu (sudo pacman -Sy && pacman -Qu)
     list-repos,lr ('pacfree -r' or 'pacman-conf -l' )
-    info,i (-Qi)
-    info-remote,ir (-Si)
+    info,n (-Qi)
+    info-remote,nr (-Si)
     list-files,lf (-Ql)
     provides,p (-Qo)
     provides-remote,pr (-F)
@@ -885,8 +885,8 @@ function parse_arguments ()
 			list-installed-foreign|lif) p[$i]="-Qem" ;;
 			list-installed-deps|lid) p[$i]="-Qd" ;;
 			list-no-required|lnr) p[$i]="-Qt" ;;
-			info|i) p[$i]="-Qi" ;;
-			info-remote|ir) p[$i]="-Si" ;;
+			info|n) p[$i]="-Qi" ;;
+			info-remote|nr) p[$i]="-Si" ;;
 			list-files|lf) p[$i]="-Ql" ;;
 			provides|p) p[$i]="-Qo" ;;
 			provides-remote|pr) p[$i]="-F" ;;
