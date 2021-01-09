@@ -4,7 +4,7 @@
 
 ![pacfree](https://github.com/leo-arch/pacfree/blob/master/screenshots/free_pacman.png)
 
-** NOTE **: Since version 0.4.0, most of the code have been rewritten and merged with `pacrep` functionality.
+**NOTE**: Since version 0.4.0, most of the code have been rewritten and merged with `pacrep` functionality.
 
 I simply love `pacman`; but I think it falls short when it comes to free-software. It simply makes no distinction at all between free and non-free software; but it should. 
 
@@ -40,7 +40,7 @@ I added two simple options to those originally provided by `pacman`: `-f --check
 
 The second added function is `-L --add-libre`, which lets you add and enable Parabola's free/libre repositories to pacman database.
 
-** NOTE **: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this has nothing to do with `FOSS`: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre".
+**NOTE**: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this has nothing to do with `FOSS`: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre".
 
 This is why `pacfree` automatically removes this kind of blacklisted packages (that is, those based on trademarking and merely technical issues) from Parabola's blacklist, allowing thus only those marked as truly non-free, namely, those tagged as `[nonfree]`, `[semifree]`, and/or `[uses-nonfree]`.
 
