@@ -6,7 +6,6 @@ PREFIX = /usr/bin
 PROG = pacfree
 
 install:
-	@mkdir -p ${PREFIX}
 	@install -Dm755 "${PROG}" "${PREFIX}"/
 	@printf "Successfully installed ${PROG}\n"
 
