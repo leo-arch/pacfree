@@ -2,8 +2,8 @@
 
 pkgname=pacfree
 pkgver=0.5.2
-pkgrel=1
-pkgdesc="Make pacman free-software aware"
+pkgrel=2
+pkgdesc="A wrapper to make pacman free-software aware"
 arch=(any)
 url="https://github.com/leo-arch/pacfree"
 license=(GPL2)
@@ -14,6 +14,6 @@ source=("git+${url}.git")
 sha256sums=('SKIP')
 
 package() {
-  cd "${srcdir}/${pkgname}"
-  install -Dm755 $pkgname "${pkgdir}/usr/bin/$pkgname"
+  cd "$srcdir/$pkgname"
+  install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
 }
