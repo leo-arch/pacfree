@@ -21,6 +21,10 @@ If you are concerned with free-software, just as I am, you don't need to move aw
 
 ## Using pacfree:
 
+PacFree is available on the AUR (https://aur.archlinux.org/packages/isfree)
+
+Or, if you prefer to install it manually:
+
 Clone this project:
 
         $ git clone https://github.com/leo-arch/pacfree
@@ -44,4 +48,4 @@ The second added function is `-L --add-libre`, which lets you add and enable Par
 
 This is why `pacfree` automatically removes this kind of blacklisted packages (that is, those based on trademarking and merely technical issues) from Parabola's blacklist, allowing thus only those marked as truly non-free, namely, those tagged as `[nonfree]`, `[semifree]`, and/or `[uses-nonfree]`.
 
-If you find any bug, and you will, let me know it.
+If you find any bug, and you will, please let me know it.
