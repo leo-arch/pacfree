@@ -51,9 +51,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.2"
+VERSION="0.5.3"
 AUTHOR="L. Abramovich"
-DATE="Jan 7, 2021"
+DATE="Jan 10, 2021"
 LICENSE="GPL2+"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -96,7 +96,17 @@ function help ()
 				/usr/bin/"$PACMAN" -h
 			else
 				echo -e "${ME}, the free-software aware pacman" \
-						"\nUsage: ${ME,,} <operation> [...]\n"
+						"\n\nWhenever a package is to be installed, ${ME}" \
+						"checks the package(s) against Parabola's" \
+						"blacklists, and, if blacklisted, it warns" \
+						"the user and let her choose whether to" \
+						"continue installing the package or not. Via the" \
+						"rules list, it also allows to choose repositories" \
+						"on a per package basis. In this way, a ruled" \
+						"package will always be installed/upgraded from" \
+						"the specified repository, disregarding the" \
+						"repositories order in pacman configuration file" \
+						"\n\nUsage: ${ME,,} <operation> [...]\n"
 
 				echo -e "Operations:
     ${ME,,} {-h --help}
@@ -171,12 +181,20 @@ go):
 
 		addlibre)
 			echo -e "Add and enable Parabola's libre repositories to" \
-					"pacman database\nUsage: ${ME,,} {-L --add-libre}"
+					"pacman database\nUsage: ${ME,,} {-L --add-libre}" \
+					"\nThe user will be asked to enable or not each of" \
+					"these libre repositories"
 		;;
 
 		addrules)
 			echo -e "Add new rules to the rules list" \
-					"\nUsage: ${ME,,} {-a --add-rule} repo/pkg ..."
+					"\nUsage: ${ME,,} {-a --add-rule} repo/pkg ...\n" \
+					"\rIf a rule, always in the form \"repo/pkg\", is added" \
+					"to the rules list (~/.config/${ME,,}/rules.conf) for" \
+					"a given package, this package will always be" \
+					"installed/upgraded from the specified repository," \
+					"disregarding the repositories order in" \
+					"'/etc/pacman.conf'"
 		;;
 
 		listrules)
@@ -1002,7 +1020,7 @@ function parse_arguments ()
 	# None of these sync suboptions are intended for software
 	#+ installation. So, if some of them is found in the sync string,
 	#+ set $no_install to 1, so that check_free() and check_rules(),
-	#+ only valid for package installation, won't be executed.
+	#+ only valid for packages installation, won't be executed.
 	#+ Drawback: This might break things if $PACMAN is not pacman or
 	#+ powerpill.
 	elif [[ $sync_value == "-S"* && $(echo "$sync_value" \
@@ -1128,6 +1146,13 @@ function check_updates ()
 
 	### UPDATE/REFRESH ###
 
+	# The program functionality does not require to update the databases
+	#+ now: the update would be performed after the checks anyway (with
+	#+ the pacman command at the end of main()). However, since pacman's
+	#+ normal procedure is to perform the updates before anything else, I
+	#+ prefer to stick to this standard and execute the update now, before
+	#+ the checks.
+
 	# If refresh, well, refresh the database
 	if [[ $do_update -gt 0 ]]; then
 
@@ -1146,6 +1171,7 @@ function check_updates ()
 		OPTS=( "${OPTS[*]//--sysupgrade}" )
 		OPTS=( "${OPTS[*]//-u}" )
 
+		# If -Syy, force the databases refresh
 		if [[ $do_update -gt 1 ]]; then
 			/usr/bin/pacman $pacman_color ${OPTS[*]} "$sync_value" \
 			-yy || exit $EXIT_FAILURE
@@ -1158,8 +1184,8 @@ function check_updates ()
 	### SYSTEM UPGRADE ###
 
 	if [[ $do_sysupgrade -eq 0 ]]; then
-		# If no sysupgrade and no packages to be installed (-Sy),
-		#+ there is nothing else to do
+		# If no sysupgrade, no packages to be installed (-Sy), and no
+		#+ extra option, there is nothing else to do
 
 		if [[ ${#PKGS[*]} -eq 0 \
 		&& (${#sync_value} -lt 3 || ${OPTS[*]} != *"--clean"*) ]]; then
@@ -1268,10 +1294,11 @@ function check_config ()
 		echo -e "# $ME configuration file
 
 # If set to false, remove packages with trademarking and merely
-# technical issues from the blacklist
+# technical issues from the blacklist (these packages are in themselves
+# free, so we don't really want them in the blacklist)
 full_blacklist=false
 
-# Define your package manager, say 'pacman' or 'powerpill' or 'yay', etc.
+# Define your package manager, say 'pacman', 'powerpill', 'yay', etc.
 pac_man=pacman
 
 # Colorize output

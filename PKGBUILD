@@ -1,8 +1,8 @@
 # Maintainer: archcrack <johndoe.arch@outlook.com>
 
 pkgname=pacfree
-pkgver=0.5.2
-pkgrel=2
+pkgver=0.5.3
+pkgrel=1
 pkgdesc="A wrapper to make pacman free-software aware"
 arch=(any)
 url="https://github.com/leo-arch/pacfree"
