@@ -233,12 +233,14 @@ function check_sys_free ()
 
 		return
 	fi
-	
+
 	local nonfree=0 pkg="" pkgs=() non_free_pkgs=() \
 	non_free_pkgs_aur=() name alternative ref id description
 
 	pkgs=( $(/usr/bin/pacman -Qn | /usr/bin/awk \
 	'!/\.par|\.hyperbola|_gnu/{print $1}') )
+
+	### CHECK OFFICIAL BLACKLIST ###
 
 	echo -e "${blue}::$nc$bold Checking installed packages against" \
 			"the official blacklist...$nc"
@@ -255,6 +257,7 @@ function check_sys_free ()
 	for pkg in ${non_free_pkgs[*]}; do
 		while read name alternative ref id description; do
 			[[ $name != $pkg ]] && continue
+			(( nonfree++ ))
 			if [[ -z $alternative ]]; then
 				alternative="$(extra_alternatives "$name")"
 			fi
@@ -263,6 +266,8 @@ function check_sys_free ()
 					"\n   Free/libre alternative: $alternative"
 		done < "$BLACKLIST_FILE"
 	done
+
+	### CHECK THE AUR BLACKLIST ###
 
 	echo -e "${blue}::$nc$bold Checking installed packages against" \
 			"the AUR blacklist...$nc"
@@ -274,6 +279,7 @@ function check_sys_free ()
 	for pkg in ${non_free_pkgs_aur[*]}; do
 		while read name alternative ref id description; do
 			[[ $name != $pkg ]] && continue
+			(( nonfree++ ))
 			if [[ -z $alternative ]]; then
 				alternative="$(extra_alternatives "$name")"
 			fi
@@ -285,14 +291,15 @@ function check_sys_free ()
 
 	unset IFS
 
-	nonfree=$((${#non_free_pkgs_aur[*]}+${#non_free_pkgs[*]}))
-
-	if [[ nonfree -eq 0 ]]; then
+	if [[ $nonfree -eq 0 ]]; then
 		echo -e "\n${green}[+]$nc No non-free/libre packages" \
-				"found. RMS smiles!"
+				"found. Uncle RMS smiles!"
+	elif [[ $nonfree -eq 1 ]]; then
+		echo -e "\n${red}[-]$nc $nonfree non-free/libre" \
+				"package found"
 	else
 		echo -e "\n${red}[-]$nc $nonfree non-free/libre" \
-				"packages found"
+				"package found"
 	fi
 }
 
