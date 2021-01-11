@@ -1551,7 +1551,7 @@ function main ()
 
 	### GET/CREATE CONFIGURATION DIRECTORIES AND FILES ###
 	check_config
-	full_blacklist=1
+
 	### GET OPTIONS, SYNC VALUE, AND PKGS TO BE INSTALLED
 	#+ FROM INPUT ###
 	# Pkgs to be installed are added to PKGS
