@@ -1,8 +1,11 @@
-./" Manpage for Pacfree
-.TH man 1 "Jan 11, 2021" "1.0" "Pacfree man page"
+./" Manpage for PacFree
+.TH man 1 "Jan 11, 2021" "1.0" "PacFree man page"
 
 .SH NAME
 PacFree - A pacman wrapper written in Bash aimed to make pacman free-software aware 
+
+.SH SYNOPSIS
+pacfree <operation> [options] [targets]
 
 .SH DESCRIPTION
 Whenever a package is to be installed, PacFree checks the package against Parabola's blacklists, and, if blacklisted, warns the user and let her choose whether to continue installing the package or not. Via the rules list, it also allows to choose repositories on a per package basis. In this way, a ruled package will always be installed/upgraded from the specified repository, disregarding the repositories order in pacman configuration file.
@@ -14,25 +17,29 @@ Pacman is no doubt a great and fantastic tool. Nonetheless, it falls short when 
 .TP
 This point is absolutely relevant: WARNING the user about proprietary software is one thing, and FORCING the user NOT to install proprietary sofware, as Parabola does (via its 'your-freedom' package), is a completely different thing. No one can be FORCED to be free; that's impossible. Freedom must be chosen, and there is no freedom without choices. It is the user herself, and not someone else, be it a person or a software, who must freely DECIDE not to install proprietary software. Someone who is forced to do the right thing would be a good robot, a good machine, but not a good person. This is where Parabola, and generally all the FSF endorsed distributions as well, is wrong; and this is why this wrapper was wrote: it will warn the user about non-free software, but it's up to her what to do about it.
 .TP
+
 \fBPackages and repositories\fR:
 .TP
-Once PacFree knows what is to be installed/upgraded, it checks every package against a rules list, and, if a rule for the package is found, it installs/upgrades the package from the specified repository (instead of from the first repository defined in '/etc/pacman.conf' providing the package, which is pacman's default behaviour).
+When it comes to packages and repositories, pacman default behaviour is to install/upgrade packages from the first repository defined in '/etc/pacman.conf' providing that package. This means that if the user wants to install/upgrade a package from a repository defined below another one providing the same package, pacman will, soon or later, override the user's decision. This is where the repository rules list come into the scene.
 .TP
-The main idea of this functionality is to make pacman able to handle packages with the same name comming from different repositories, for example, 'core/licenses' and 'libre/licenses', or 'community/midori' and 'libre/midori', without the need to explicitly specify the repository in the command line, besides the important fact that it works for upgrades as well. In this way, we can use packages and repositories coming from different Arch based distributions more easily and smoothly.
+Once PacFree knows what is to be installed/upgraded, it checks every package against a rules list, and, if a rule for the package is found, it installs/upgrades the package from the specified repository, no matter what is the repositories order in '/etc/pacman.conf'.
+.TP
+The main idea of this functionality is to make pacman able to handle packages with the same name coming from different repositories, for example, 'core/licenses' and 'libre/licenses', or 'community/midori' and 'libre/midori', without the need to explicitly specify the repository in the command line, besides the important fact that it works for upgrades as well. In this way, we can use packages and repositories coming from different Arch based distributions more easily and smoothly.
+
 .SH OPTIONS
 .TP
 Besides honoring all pacman's regular options (exception made of --ignore and --ignoregroup directives), Pacfree offers the following ones:
 .TP
 
-.B -a, --add-rule
+.B -a, --add-rule \fR<rule(s)>
 Add rule(s) specified as argument(s) to the rules list. If a rule, always in the form 'repo/pkg', is added to the rules list for a given package, this package will always be installed/upgraded from the specified repository, disregarding the repositories order in '/etc/pacman.conf'.
 .TP
 
 .B -b, --full-blacklist
-Use Parabola's full blacklist instead of the  trimmed down one. By default, PacFree removes from this blacklist packages blacklisted merely because of branding and/or technical issues, like 'pacman', 'grub' or 'filesystem', simply because they are in themselves free. According to Parabola's blacklist, indeed, 'core/filesystem' is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this has nothing to do with FOSS: some files provided by 'core/silesystem', like '/usr/lib/os-release' and '/usr/share/factory/etc/issue', contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking one. This is why by default Pacfree removes all these packages from the blacklist.
+Use Parabola's full blacklist instead of the  trimmed down one. By default, PacFree removes from this blacklist packages blacklisted merely because of branding and/or technical issues, like 'pacman', 'grub' or 'filesystem', simply because they are in themselves free. According to Parabola's blacklist, indeed, 'core/filesystem' is non-free; that's why Parabola offers a "free" version of it: 'libre/filesystem'. However, the reason behind this has nothing to do with FOSS: some files provided by 'core/silesystem', like '/usr/lib/os-release' and '/usr/share/factory/etc/issue', contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking one. This is why by default PacFree removes all these packages from the blacklist.
 .TP
 
-.B -f, --check-free
+.B -f, --check-free \fR<package(s)>
 Check package(s) against blacklists. With no argument, lists all non-free installed packages. Else, it checks packages specified as further arguments against the blacklists.
 .TP
 
@@ -40,16 +47,22 @@ Check package(s) against blacklists. With no argument, lists all non-free instal
 List currently enabled rules.
 .TP
 
-.B -L, --add-libre
+.B -L, --add-libre \fR<repo(s)>
 Add and enable free/libre repositories (Parabola). With no argument, the user will be asked whether to enable or not each of the libre repositories. Otherwise, only repositories specified as arguments will be added. Valid repositories are: libre, pcr, kernels, cross, nonprism, libre-multilib, libre-testing, pcr-testing, libre-multilib-testing, and nonprism-testing.
 .TP
 
-.B -r, --list-repos
+.B -r, --list-repos \fR<repo(s)>
 List currently enabled repositories or check repositories specified as further arguments.
 .TP
 
 .B -u, --upgrademe
 Check current upstream version
+.TP
+
+If no operation is specified, but only packages, -Syu is assumed
+.TP
+
+Use --color=never or -nc to disable colored output
 .TP
 
 For those users coming from Debian/RedHat based systems, the following APT/DNF-like syntax (and its abbreviated form) is recognized (the pacman/pacfree equivalent is provided in parentheses and is always the recommended way to go):
@@ -85,10 +98,12 @@ For those users coming from Debian/RedHat based systems, the following APT/DNF-l
  version (-V)
 
 .SH FILES
+$HOME/.config/pacfree/pacfree.conf
 .TP
-\fBMain configuration file:\fR \fI$HOME/.config/pacfree/pacfree.conf\fR
-.TP
-\fBRules list file:\fR \fI$HOME/.config/pacfree/rules.conf\fR
+$HOME/.config/pacfree/rules.conf
+
+.SH LICENSE
+Pacfree is released under the GNU General Public License version 2.
 
 .SH AUTHOR
 L. Abramovich (https://github.com/leo-arch)
