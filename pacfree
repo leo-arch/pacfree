@@ -359,7 +359,7 @@ function add_libre_repos ()
 
 	[[ $missing_repo -eq 0 ]] && return
 
-	/usr/bin/sudo /usr/bin/true
+	[[ -z $1 ]] && /usr/bin/sudo /usr/bin/true
 
 	local keyring_url="https://www.parabola.nu/packages/libre/x86_64/parabola-keyring/download"
 	local mirrorlist_url="https://mirror.fsf.org/parabola/mirrorlist.txt"
@@ -427,8 +427,7 @@ function add_libre_repos ()
 					1>/dev/null || exit $EXIT_FAILURE
 
 		elif [[ -n $1 ]]; then
-			echo -e "${green}[+]$nc The [${x}] repository is" \
-					"already enabled"
+			echo "[${x}]: Repository already enabled"
 			(( missing_repo-- ))
 			[[ $missing_repo -eq 0 ]] && exit $EXIT_SUCCESS
 		fi
