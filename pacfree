@@ -50,9 +50,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.5"
+VERSION="0.5.6"
 AUTHOR="L. Abramovich"
-DATE="Jan 11, 2021"
+DATE="Jan 12, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -130,6 +130,7 @@ echo -e "\n$ME specific operations:
     ${ME,,} {-f --check-free}     [package(s)]
     ${ME,,} {-l --list-rules}
     ${ME,,} {-a --add-rule}       <rule(s)>
+    ${ME,,} {-d --del-rule}       <rule(s)>
     ${ME,,} {-L --add-libre}      [repo(s)]
     ${ME,,} {-r --list-repos}     [repo(s)]
     ${ME,,} {-b --full-blacklist}
@@ -172,6 +173,7 @@ recommended way to go):
     check-free,cf (pacfree -f)
     list-rules,lr (pacfree -l)
     add-rule,ar (pacfree -a)
+	del-rule,dl (pacfree -d)
     add-libre,al (pacfree -L)
     help (-h)
     version (-V)"
@@ -197,7 +199,7 @@ recommended way to go):
 					"\nUsage: ${ME,,} {-L --add-libre} [repo(s)]"
 		;;
 
-		addrules)
+		addrule)
 			echo -e "Add new rules to the rules list" \
 					"(~/.config/${ME,,}/rules.conf)" \
 					"\nIf a rule, always in the form \"repo/pkg\", is" \
@@ -206,6 +208,11 @@ recommended way to go):
 					"specified repository, disregarding the repositories" \
 					"order in '$PACMAN_CONF_FILE'" \
 					"\nUsage: ${ME,,} {-a --add-rule} <repo/pkg> ...\n"
+		;;
+
+		delrule)
+			echo -e "Remove rules from the rules list" \
+					"\nUsage: ${ME,,} {-d --del-rule} [rule(s)]"
 		;;
 
 		listrules)
@@ -426,7 +433,7 @@ function add_libre_repos ()
 					1>/dev/null || exit $EXIT_FAILURE
 
 		elif [[ -n $1 ]]; then
-			echo "[${x}]: Repository already enabled"
+			echo "${ME,,}: [${x}]: Repository already enabled"
 			(( missing_repo-- ))
 			[[ $missing_repo -eq 0 ]] && exit $EXIT_SUCCESS
 		fi
@@ -574,7 +581,17 @@ function check_free ()
 	local external=0
 	[[ -n $1 ]] && external=1
 
-	[[ ${#PKGS[*]} -eq 0 ]] && return
+	if [[ ${#PKGS[*]} -eq 0 ]]; then
+		# If there are no packages in PKGS, it means that whatever has been
+		#+ passed as parameters in the command line it was not a valid
+		#+ package name
+		if [[ $external -eq 1 ]]; then
+			echoerr "${ME,,}: No valid target specified"
+			exit $EXIT_FAILURE
+		fi
+
+		return
+	fi
 
 	local pkgs_counter=${#PKGS[*]} repo="" pkg="" blacklisted="" \
 	alternative="" description="" aur=0 source=""
@@ -590,7 +607,7 @@ function check_free ()
 		# If "repo/pkg", get the two values
 		if [[ ${PKGS[$i]} == *"/"* ]]; then
 			repo=${PKGS[$i]%%/*}
-			pkg=${PKGS[$i]##*/}
+			pkg=${PKGS[$i]#*/}
 		else
 			pkg=${PKGS[$i]}
 		fi
@@ -607,10 +624,16 @@ function check_free ()
 			case $repo in
 
 				# If $repo is some of the Parabola's repos, skip the
-				#+ test, since $pkg is supposed to be free
-				'libre'|'libre-multilib'|'kernels'|'pcr'|'cross'\
-				|'nonprism'|'libre-testing'|'libre-multilib-testing'\
-				|'pcr-testing'|'nonprism-testing')
+				#+ test, since all packages here are supposed to be free
+				libre|libre-multilib|kernels|pcr|cross|nonprism|\
+				libre-testing|libre-multilib-testing|pcr-testing|\
+				nonprism-testing)
+					# Print the message only if called via -f. Otherwise
+					#+ just skip the package
+					if [[ $external -eq 1 ]]; then
+						echo -e "$nc${bold}${PKGS[$i]}$nc is" \
+								"${green}not blacklisted$nc"
+					fi
 					continue
 				;;
 
@@ -638,8 +661,7 @@ function check_free ()
 
 			# If blacklisted, get description and alternative pkg, if any
 			description="$(echo "$blacklisted" | /usr/bin/cut -d":" -f5-10)"
-			alternative="$(echo "$blacklisted" \
-			| /usr/bin/cut -d":" -f2)"
+			alternative="$(echo "$blacklisted" | /usr/bin/cut -d":" -f2)"
 
 			# Parabola's blacklists lack alternative packages for non-free
 			#+ soft that indeed has an alternative libre version. Here I add
@@ -739,7 +761,9 @@ function check_added_functions ()
 
 				-L|--add-libre) help "addlibre" ;;
 
-				-a|--add-rules) help "addrules" ;;
+				-a|--add-rule) help "addrule" ;;
+
+				-d|--del-rule) help "delrule" ;;
 
 				-l|--list-rules) help "listrules" ;;
 
@@ -794,9 +818,15 @@ function check_added_functions ()
 			exit $EXIT_SUCCESS
 		;;
 
-		-a|--add-rules)
+		-a|--add-rule)
 			shift
-			add_rules "$@"
+			add_rule "$@"
+			exit $EXIT_SUCCESS
+		;;
+
+		-d|--del-rule)
+			shift
+			del_rule "$@"
 			exit $EXIT_SUCCESS
 		;;
 
@@ -875,26 +905,65 @@ function list_repos ()
 
 ################################
 
-function add_rules ()
+function del_rule ()
+{
+	local del_rules=() err=0
+
+	del_rules=( "$@" )
+
+	for rule in ${del_rules[*]}; do
+
+		if ! /usr/bin/grep -q ^"$rule"$ "$RULES_FILE"; then
+			echoerr "${ME,,}: '${rule}': No such rule"
+			(( err++ ))
+			continue
+		elif /usr/bin/sed -i "/^${rule/\//\\\/}$/d" "$RULES_FILE"; then
+			echo -e "${green}[+]$nc '${rule}': Rule successfully removed"
+		else
+			(( err++ ))
+		fi
+
+	done
+
+	[[ $err -gt 0 ]] && exit $EXIT_FAILURE
+}
+
+################################
+
+function add_rule ()
 {
 	if [[ -z $1 ]]; then
 		echoerr "${ME,,}: No rule specfied (try '${ME,,} -a --help')"
 		exit $EXIT_FAILURE
 	fi
 
-	local repo="" rule=""
+	local repo="" rule="" pkg_name=""
 
 	for rule in "$@"; do
-		repo=""
+
+		repo=""; pkg_name=""
+
 		if [[ $rule == *"/"* ]]; then
 
-			repo=${rule%%/*}
+			repo="${rule%%/*}"
 
+			# Check if repo is a valid repo
 			if ! [[ $(/usr/bin/pacman-conf -r "$repo" \
 			2>/dev/null) ]]; then
 				echoerr "${ME,,}: '${repo}': No such repository"
 				continue
 			fi
+
+			# Check if pkg name is a valid pkg name
+			pkg_name="${rule#*/}"
+
+			valid_pkg_name "$pkg_name"
+
+			if [[ $? -ne 0 ]]; then
+				echoerr "${ME,,}: '${pkg_name}': Not a valid package name"
+				continue
+			fi
+			
 		else
 			echoerr "${ME,,}: '${rule}': A repository must be" \
 					"specified. Example: 'repo/${rule}'"
@@ -906,8 +975,7 @@ function add_rules ()
 			echo "$rule" | /usr/bin/sudo -u "$user" /usr/bin/tee -a \
 			"$RULES_FILE" 1>/dev/null || exit $EXIT_FAILURE
 
-			echo -e "${green}[+]$nc '${rule}': New rule successfully" \
-					"added"
+			echo -e "${green}[+]$nc '${rule}': Rule successfully added"
 		else
 			echoerr "${ME,,}: '${rule}': Rule already exists"
 			continue
@@ -996,7 +1064,7 @@ function parse_arguments ()
 			install-local|il) p[$i]="-U" ;;
 			remove|r) p[$i]="-Rns" ;;
 			update|refresh|u) p[$i]="-Sy" ;;
-			upgrade|sysupgrade|s) p[$i]="-Syu" ;;
+			upgrade|sysupgrade|s) p[$i]="-Su" ;;
 			search|query|q) p[$i]="-Ss" ;;
 			list-installed|li) p[$i]="-Qe" ;;
 			list-installed-native|lin) p[$i]="-Qen" ;;
@@ -1016,6 +1084,7 @@ function parse_arguments ()
 			# Pacfree operations
 			list-rules|lr) p[$i]="-l" ;;
 			add-rule|ar) p[$i]="-a" ;;
+			del-rule|dr) p[$i]="-d" ;;
 			add-libre|al) p[$i]="-L" ;;
 			list-repos|lr) p[$i]="-r" ;;
 			check-free|cf) p[$i]="-f" ;;
@@ -1103,8 +1172,8 @@ function parse_arguments ()
 	#+ installation. So, if some of them is found in the sync string,
 	#+ set $no_install to 1, so that check_free() and check_rules(),
 	#+ only valid for packages installation, won't be executed.
-	#+ Drawback: This might break things if $PACMAN is not pacman or
-	#+ powerpill.
+	#+ Drawback: This might break things if $PACMAN is not pacman,
+	#+ powerpill or yay.
 	elif [[ $sync_value == "-S"* && $(echo "$sync_value" \
 	| /usr/bin/grep "[c,g,h,i,l,s,w,p]") ]]; then
 		no_install=1
@@ -1129,7 +1198,8 @@ function parse_arguments ()
 		if [[ ${p[$i]} == '-'* ]]; then
 			OPTS[${#OPTS[*]}]=${p[$i]}
 		else
-			if valid_pkg_name "${p[$i]}" -eq 0; then
+			valid_pkg_name "${p[$i]}"
+			if [[ $? -eq 0 ]]; then
 				PKGS[${#PKGS[*]}]=${p[$i]}
 			else
 				OPTS[${#OPTS[*]}]=${p[$i]}
@@ -1177,17 +1247,17 @@ function check_rules ()
 			case ${PKGS[$i]} in
 				*"<"*)
 					pkg_name="${PKGS[$i]%%<*}"
-					pkg_version="<${PKGS[$i]##*<}"
+					pkg_version="<${PKGS[$i]#*<}"
 				;;
 				*">"*)
 					pkg_name="${PKGS[$i]%%>*}"
-					pkg_version=">${PKGS[$i]##*>}"
+					pkg_version=">${PKGS[$i]#*>}"
 				;;
 			esac
 		fi
 
 		for (( j=0;j<${#rules[*]};j++ )); do
-			if [[ $pkg_name == "${rules[$j]##*/}" ]]; then
+			if [[ $pkg_name == "${rules[$j]#*/}" ]]; then
 
 				if [[ -n $pkg_version ]]; then
 					PKGS[$i]="${rules[$j]}$pkg_version"
@@ -1348,6 +1418,9 @@ function check_config ()
 		echoerr "${ME,,}: pacman: Command not found"
 		exit $EXIT_FAILURE
 	fi
+
+	# NOTE: curl is a dependency of pacman, so that there is no need to
+	#+ check for it
 
 	[[ $SUDO_USER ]] && user=$SUDO_USER || user=$USER
 	if [[ -z $user ]]; then
@@ -1516,10 +1589,10 @@ function valid_pkg_name ()
 		if [[ -e "$pkg_name" ]]; then
 			return $EXIT_FAILURE
 
-		# If not a filename, take whatever comes after the slash
+		# If not a filename, take whatever comes after the first slash
 		#+ as the package name
 		else
-			tmp="${pkg_name##*/}"
+			tmp="${pkg_name#*/}"
 			pkg_name="$tmp"
 		fi
 	fi
@@ -1690,10 +1763,11 @@ function main ()
 		fi
 	fi
 
+#	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value ${PKGS[*]}"
+
 	/usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
 	${PKGS[*]} || exit $EXIT_FAILURE
 
-#	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value ${PKGS[*]}"
 }
 
 ################################

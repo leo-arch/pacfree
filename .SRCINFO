@@ -1,6 +1,6 @@
 pkgbase = pacfree
 	pkgdesc = A pacman wrapper to make pacman free-software aware
-	pkgver = 0.5.5
+	pkgver = 0.5.6
 	pkgrel = 1
 	url = https://github.com/leo-arch/pacfree
 	arch = any
