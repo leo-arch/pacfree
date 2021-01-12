@@ -1,9 +1,9 @@
 # Maintainer: archcrack <johndoe.arch@outlook.com>
 
 pkgname=pacfree
-pkgver=0.5.4
+pkgver=0.5.5
 pkgrel=1
-pkgdesc="A wrapper to make pacman free-software aware"
+pkgdesc="A pacman wrapper to make pacman free-software aware"
 arch=(any)
 url="https://github.com/leo-arch/pacfree"
 license=(GPL2)
@@ -16,4 +16,6 @@ sha256sums=('SKIP')
 package() {
   cd "$srcdir/$pkgname"
   install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
+  install -g 0 -o 0 -Dm644 manpage "$pkgdir/usr/share/man/man1/${pkgname}.1"
+  gzip "$pkgdir/usr/share/man/man1/${pkgname}.1"
 }

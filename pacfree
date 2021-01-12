@@ -51,7 +51,7 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.4"
+VERSION="0.5.5"
 AUTHOR="L. Abramovich"
 DATE="Jan 11, 2021"
 LICENSE="GPL2+"
@@ -90,7 +90,7 @@ function echoerr ()
 
 function help ()
 {
-	# $arg will be local and readonly
+	# $arg will be local and read-only
 	declare -r arg="$1"
 
 	case $arg in
@@ -100,8 +100,9 @@ function help ()
 				/usr/bin/"$PACMAN" -h
 			else
 				echo -e "${ME}, the free-software aware pacman" \
-						"\n\nWhenever a package is to be installed, ${ME}" \
-						"checks the package(s) against Parabola's" \
+						"\n\nDescription:" \
+						"\nWhenever a package is to be installed, ${ME}" \
+						"checks the package against Parabola's" \
 						"blacklists, and, if blacklisted, warns" \
 						"the user and let her choose whether to" \
 						"continue installing the package or not. Via the" \
@@ -115,35 +116,36 @@ function help ()
 				echo -e "Operations:
     ${ME,,} {-h --help}
     ${ME,,} {-V --version}
-    ${ME,,} {-D --database}   <options> <package(s)>
-    ${ME,,} {-F --files}      [options] [package(s)]
-    ${ME,,} {-Q --query}      [options] [package(s)]
-    ${ME,,} {-R --remove}     [options] <package(s)>
-    ${ME,,} {-S --sync}       [options] [package(s)]
-    ${ME,,} {-T --deptest}    [options] [package(s)]
-    ${ME,,} {-U --upgrade}    [options] <file(s)>"
+    ${ME,,} {-D --database}       <options> <package(s)>
+    ${ME,,} {-F --files}          [options] [package(s)]
+    ${ME,,} {-Q --query}          [options] [package(s)]
+    ${ME,,} {-R --remove}         [options] <package(s)>
+    ${ME,,} {-S --sync}           [options] [package(s)]
+    ${ME,,} {-T --deptest}        [options] [package(s)]
+    ${ME,,} {-U --upgrade}        [options] <file(s)>"
 
 			fi
 
 echo -e "\n$ME specific operations:
     ${ME,,} [package(s)]
-    ${ME,,} {-f --check-free} [package(s)]
+    ${ME,,} {-f --check-free}     [package(s)]
     ${ME,,} {-l --list-rules}
-    ${ME,,} {-a --add-rule}   <rule(s)>
-    ${ME,,} {-L --add-libre}
-    ${ME,,} {-r --list-repos} [repo(s)]
+    ${ME,,} {-a --add-rule}       <rule(s)>
+    ${ME,,} {-L --add-libre}      [repo(s)]
+    ${ME,,} {-r --list-repos}     [repo(s)]
+    ${ME,,} {-b --full-blacklist}
     ${ME,,} {-u --upgrademe}
 
-Use '${ME,,} {-h --help}' with an operation for available options
+Use '${ME,,} {-h --help}' with an operation for more information
 
 If no operation is specified, but only packages, -Syu is assumed
 
 Use --color=never or -nc to disable colored output
 
 For those users coming from Debian/RedHat based systems, the following \
-APT/DNF syntax (and its abbreviated form) is recognized (the pacman/${ME,,} \
-equivalent is provided in parentheses and is always the recommended way to \
-go):
+APT/DNF-like syntax (and its abbreviated form) is recognized (the \
+pacman/${ME,,} equivalent is provided in parentheses and is always the \
+recommended way to go):
 
     install,i (-S)
     install-local,il (-U)
@@ -177,28 +179,34 @@ go):
 		;;
 
 		checkfree)
-			echo -e "With no argument, lists all non-free installed" \
+			echo -e "Check package(s) against blacklists" \
+					"\nWith no argument, lists all non-free installed" \
 					"packages. Else, it checks packages specified as" \
 					"further arguments against the blacklists" \
 					"\nUsage: ${ME,,} {-f --check-free} [packages(s)]"
 		;;
 
 		addlibre)
-			echo -e "Add and enable Parabola's libre repositories to" \
-					"pacman database (the user will be asked to enable" \
-					"or not each of these libre repositories)" \
-					"\nUsage: ${ME,,} {-L --add-libre}"
+			echo -e "Add and enable free/libre repositories (Parabola)" \
+					"\nWith no argument, the user will be asked whether to" \
+					"enable or not each of the libre repositories." \
+					"Otherwise, only repositories specified as arguments" \
+					"will be added. Valid repositories are: libre, pcr," \
+					"kernels, cross, nonprism, libre-multilib," \
+					"libre-testing, pcr-testing, libre-multilib-testing," \
+					"and nonprism-testing" \
+					"\nUsage: ${ME,,} {-L --add-libre} [repo(s)]"
 		;;
 
 		addrules)
 			echo -e "Add new rules to the rules list" \
-					"\nUsage: ${ME,,} {-a --add-rule} repo/pkg ...\n" \
-					"\rIf a rule, always in the form \"repo/pkg\", is added" \
-					"to the rules list (~/.config/${ME,,}/rules.conf) for" \
-					"a given package, this package will always be" \
-					"installed/upgraded from the specified repository," \
-					"disregarding the repositories order in" \
-					"'$PACMAN_CONF_FILE'"
+					"(~/.config/${ME,,}/rules.conf)" \
+					"\nIf a rule, always in the form \"repo/pkg\", is" \
+					"added to the rules list for a given package, this" \
+					"package will always be installed/upgraded from the" \
+					"specified repository, disregarding the repositories" \
+					"order in '$PACMAN_CONF_FILE'" \
+					"\nUsage: ${ME,,} {-a --add-rule} <repo/pkg> ...\n"
 		;;
 
 		listrules)
@@ -209,12 +217,22 @@ go):
 		listrepos)
 			echo -e "List currently enabled repositories or check" \
 					"repositories specified as further arguments" \
-					"\nUsage: ${ME,,} {-r --list-repos} [repo(s)]"
+					"\nUsage: ${ME,,} {-r --list-repos} <repo(s)>"
 		;;
 
 		upgrademe)
 			echo -e "Check current upstream version" \
 					"\nUsage: ${ME,,} {-u --upgrademe}"
+		;;
+
+		fullblacklist)
+			echo -e "Use Parabola's full blacklist instead of the " \
+					"trimmed down one. By default, ${ME} removes from this" \
+					"blacklist packages blacklisted merely because of" \
+					"branding and/or technical issues, like 'pacman'," \
+					"'grub' or 'filesystem', simply because they are in" \
+					"themselves free." \
+					"\nUsage: ${ME,,} {-b --full-blacklist}"
 		;;
 	esac
 }
@@ -309,26 +327,35 @@ function add_libre_repos ()
 {
 	local missing_repo=0 libre_repos=()
 
-	for x in libre libre-multilib pcr kernels cross nonprism; do
-		if [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
-			echo -e "${green}[+]$nc The [${x}] repository is" \
-					"already enabled"
-		else
-			answer="."
+	if [[ -n $1 ]]; then
 
-			while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
-				read -rp " Add [${x}]? [y/N] " answer
-			done
+		libre_repos=( "$@" )
+		missing_repo=${#libre_repos[*]}
 
-			case $answer in
-				y|Y)
-					(( missing_repo++ ))
-					libre_repos[${#libre_repos[*]}]="$x"
-				;;
-				""|n|N) continue ;;
-			esac
-		fi
-	done
+	else
+		# If no argument, ask the user for each available repository
+		for x in libre libre-multilib pcr kernels cross nonprism \
+		libre-testing libre-multilib-testing pcr-testing nonprism-testing; do
+			if [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
+				echo -e "${green}[+]$nc The [${x}] repository is" \
+						"already enabled"
+			else
+				answer="."
+
+				while ! [[ $answer =~ ^(y|Y|n|N|)$ ]]; do
+					read -rp " Add [${x}]? [y/N] " answer
+				done
+
+				case $answer in
+					y|Y)
+						(( missing_repo++ ))
+						libre_repos[${#libre_repos[*]}]="$x"
+					;;
+					""|n|N) continue ;;
+				esac
+			fi
+		done
+	fi
 
 	[[ $missing_repo -eq 0 ]] && return
 
@@ -373,6 +400,22 @@ function add_libre_repos ()
 	fi
 
 	for x in ${libre_repos[*]}; do
+
+		# If the repo has been supplied as argument, check we have a valid
+		#+ repository
+		if [[ -n $1 ]]; then
+			case $x in
+				libre|pcr|cross|kernels|nonprism|libre-multilib\
+				|libre-testing|pcr-testing|nonprism-testing\
+				|libre-multilib-testing) ;;
+				*)
+					echoerr "${ME,,}: [${x}]: No such repository"
+					(( missing_repo-- ))
+					[[ $missing_repo -eq 0 ]] && exit $EXIT_SUCCESS
+					continue
+				;;
+			esac
+		fi
 
 		if ! [[ $(/usr/bin/pacman-conf -r "$x" 2>/dev/null) ]]; then
 			echo -e "${blue}::$nc$bold Adding [${x}] repository" \
@@ -754,7 +797,8 @@ function check_added_functions ()
 		;;
 
 		-L|--add-libre)
-			add_libre_repos
+			shift
+			add_libre_repos "$@"
 			exit $EXIT_SUCCESS
 		;;
 
@@ -922,12 +966,22 @@ function parse_arguments ()
 					*) pacman_color="--color=auto"; color_ok=1 ;;
 				esac
 
+				# Remove the argument: we don't want to pass it to pacman
 				p[$i]=""
 			;;
 
 			-nc) # Short for --color=never
 				p[$i]=""; yellow=""; green=""; red=""; blue=""; bold=""
 				nc=""; pacman_color="--color=never"; color_ok=0
+			;;
+
+			-b|--full-blacklist)
+				p[$i]=""; full_blacklist=1
+				case ${p[$i+1]} in
+					-h|--help)
+						help "fullblacklist"
+						exit $EXIT_SUCCESS ;;
+				esac
 			;;
 
 			# Allow some APT/DNF syntax for users coming from
