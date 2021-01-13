@@ -912,7 +912,7 @@ function del_repo ()
 		local repo_found=0 counter=0 lines=""
 
 		# Get the line numbers in pacman config file for the repository
-		#+ to be disabled. They will be passed later to 'sed'
+		#+ to be disabled. They will be passed later to sed
 		while read -r line; do
 			(( counter++ ))
 			if [[ $repo_found -eq 0 && $line == "[${delrepo}]" ]]; then
@@ -926,6 +926,7 @@ function del_repo ()
 					"["*"]") break ;;
 				esac
 
+				# Store line number in sed format
 				lines="${lines};${counter}d"
 			fi
 
@@ -941,8 +942,10 @@ function del_repo ()
 				"from ${PACMAN_CONF_FILE}...$nc "	
 
 		# Remove the lines corresponding to the repo to be disabled from
-		#+ pacman config file
-		/usr/bin/sudo /usr/bin/sed -i "${lines:1}" "$PACMAN_CONF_FILE"
+		#+ pacman config file. "${lines:1}" removes the leading semicolon
+		#+ and cat -s removes duplicated blank lines
+		/usr/bin/sed "${lines:1}" "$PACMAN_CONF_FILE" | /usr/bin/cat -s \
+		| /usr/bin/sudo /usr/bin/tee "$PACMAN_CONF_FILE" 1>/dev/null
 
 		if ! /usr/bin/sudo /usr/bin/pacman -Sy; then
 			exit $EXIT_FAILURE
