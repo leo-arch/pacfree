@@ -235,7 +235,7 @@ recommended way to go):
 					"arguments" \
 					"\nUsage: ${ME,,} {-x --del-repo} <repo(s)>"
 		;;
-		
+
 		listrepos)
 			echo -e "List currently enabled repositories or check" \
 					"repositories specified as further arguments" \
@@ -939,11 +939,14 @@ function del_repo ()
 		fi
 
 		echo -e "${blue}::$nc$bold Removing [$delrepo] repository" \
-				"from ${PACMAN_CONF_FILE}...$nc "	
+				"from ${PACMAN_CONF_FILE}...$nc "
 
 		# Remove the lines corresponding to the repo to be disabled from
 		#+ pacman config file. "${lines:1}" removes the leading semicolon
-		#+ and cat -s removes duplicated blank lines
+		#+ from the sed line, and cat -s removes duplicated blank lines
+		#+ from the file
+		# NOTE: I would be better to find a way of doing this while
+		#+ preserving file attributes
 		/usr/bin/sed "${lines:1}" "$PACMAN_CONF_FILE" | /usr/bin/cat -s \
 		| /usr/bin/sudo /usr/bin/tee "$PACMAN_CONF_FILE" 1>/dev/null
 
@@ -1072,7 +1075,7 @@ function add_rule ()
 				echoerr "${ME,,}: '${pkg_name}': Not a valid package name"
 				continue
 			fi
-			
+
 		else
 			echoerr "${ME,,}: '${rule}': A repository must be" \
 					"specified. Example: 'repo/${rule}'"
