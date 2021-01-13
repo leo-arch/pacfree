@@ -27,11 +27,12 @@
 #+ Built-in pacfree options:
 #+ [package(s)] (No options amounts to -Syu [PKG(S)])
 #+ -f | --check-free (check for non-free installed packages)
-#+ -L | --add-libre (Add and enable [libre] repository)
+#+ -L | --add-repo (Add and enable libre repositories)
+#+ -x | --del-repo (Disable libre repositories)
+#+ -r | --list-repos (List currently enabled repos)
 #+ -a | --add-rule (Add new repo rule)
 #+ -d | --del-rule (Remove repo rule)
 #+ -l | --list-rules (List current rules)
-#+ -r | --list-repos (List currently enabled repos)
 
 ### TODO LIST ###
 # 1) --ignore and --ignoregroup directives won't work
@@ -51,9 +52,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.6"
+VERSION="0.5.7"
 AUTHOR="L. Abramovich"
-DATE="Jan 12, 2021"
+DATE="Jan 13, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -134,14 +135,20 @@ echo -e "\n$ME specific operations:
     ${ME,,} {-l --list-rules}
     ${ME,,} {-a --add-rule}       <rule(s)>
     ${ME,,} {-d --del-rule}       <rule(s)>
-    ${ME,,} {-L --add-libre}      [repo(s)]
+    ${ME,,} {-L --add-repo}       [repo(s)]
+    ${ME,,} {-x --del-repo}       <repo(s)>
     ${ME,,} {-r --list-repos}     [repo(s)]
-    ${ME,,} {-b --full-blacklist}
     ${ME,,} {-u --upgrademe}
 
 Use '${ME,,} {-h --help}' with an operation for more information
+
 If no operation is specified, but only packages, -Syu is assumed
+
 Use --color=never or -nc to disable colored output
+
+Use  -b or --full-blacklist to use Parabola's full blacklist instead \
+of the reduced version used by default. For more information consult \
+the manpage
 
 For those users coming from Debian/RedHat based systems, the following \
 APT/DNF-like syntax (and its abbreviated form) is recognized (the \
@@ -172,10 +179,12 @@ recommended way to go):
     history,logs,l [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)
     list-repos,lr ('pacfree -r' or 'pacman-conf -l' )
     check-free,cf (pacfree -f)
-    list-rules,lr (pacfree -l)
     add-rule,ar (pacfree -a)
     del-rule,dl (pacfree -d)
-    add-libre,al (pacfree -L)
+    list-rules,lr (pacfree -l)
+    add-repo,al (pacfree -L)
+    del-repo,dl (pacfree -x)
+    list-repos,ll (pacfree -r or pacman-conf -l)
     help (-h)
     version (-V)"
 		;;
@@ -186,18 +195,6 @@ recommended way to go):
 					"packages. Else, it checks packages specified as" \
 					"further arguments against the blacklists" \
 					"\nUsage: ${ME,,} {-f --check-free} [packages(s)]"
-		;;
-
-		addlibre)
-			echo -e "Add and enable free/libre repositories (Parabola)" \
-					"\nWith no argument, the user will be asked whether to" \
-					"enable or not each of the libre repositories." \
-					"Otherwise, only repositories specified as arguments" \
-					"will be added. Valid repositories are: libre, pcr," \
-					"kernels, cross, nonprism, libre-multilib," \
-					"libre-testing, pcr-testing, libre-multilib-testing," \
-					"and nonprism-testing" \
-					"\nUsage: ${ME,,} {-L --add-libre} [repo(s)]"
 		;;
 
 		addrule)
@@ -221,6 +218,24 @@ recommended way to go):
 					"\nUsage: ${ME,,} {-l --list-rules}"
 		;;
 
+		addrepo)
+			echo -e "Add and enable free/libre repositories (Parabola)" \
+					"\nWith no argument, the user will be asked whether to" \
+					"enable or not each of the libre repositories." \
+					"Otherwise, only repositories specified as arguments" \
+					"will be added. Valid repositories are: libre, pcr," \
+					"kernels, cross, nonprism, libre-multilib," \
+					"libre-testing, pcr-testing, libre-multilib-testing," \
+					"and nonprism-testing" \
+					"\nUsage: ${ME,,} {-L --add-repo} [repo(s)]"
+		;;
+
+		delrepo)
+			echo -e "Disable libre repositories specified as further" \
+					"arguments" \
+					"\nUsage: ${ME,,} {-x --del-repo} <repo(s)>"
+		;;
+		
 		listrepos)
 			echo -e "List currently enabled repositories or check" \
 					"repositories specified as further arguments" \
@@ -441,7 +456,7 @@ function add_libre_repos ()
 
 	done
 
-	echo -e "${blue}::$nc$bold Updating pacman database...$nc "
+#	echo -e "${blue}::$nc$bold Updating pacman database...$nc "
 
 	/usr/bin/sudo /usr/bin/pacman -Sy || exit $EXIT_FAILURE
 }
@@ -760,11 +775,13 @@ function check_added_functions ()
 
 				-f|--check-free) help "checkfree" ;;
 
-				-L|--add-libre) help "addlibre" ;;
-
 				-a|--add-rule) help "addrule" ;;
 
 				-d|--del-rule) help "delrule" ;;
+
+				-L|--add-repo) help "addrepo" ;;
+
+				-x|--del-repo) help "delrepo" ;;
 
 				-l|--list-rules) help "listrules" ;;
 
@@ -814,11 +831,6 @@ function check_added_functions ()
 			exit $EXIT_SUCCESS
 		;;
 
-		-l|--list-rules)
-			list_rules
-			exit $EXIT_SUCCESS
-		;;
-
 		-a|--add-rule)
 			shift
 			add_rule "$@"
@@ -831,9 +843,20 @@ function check_added_functions ()
 			exit $EXIT_SUCCESS
 		;;
 
-		-L|--add-libre)
+		-l|--list-rules)
+			list_rules
+			exit $EXIT_SUCCESS
+		;;
+
+		-L|--add-repo)
 			shift
 			add_libre_repos "$@"
+			exit $EXIT_SUCCESS
+		;;
+
+		-x|--del-repo)
+			shift
+			del_repo "$@"
 			exit $EXIT_SUCCESS
 		;;
 
@@ -848,6 +871,88 @@ function check_added_functions ()
 			exit $EXIT_SUCCESS
 		;;
 	esac
+}
+
+################################
+
+function del_repo ()
+{
+	local repos=() repo="" delrepos=() found=0
+
+	delrepos=( "$@" )
+
+	repos=( "libre" "libre-multilib" "pcr" "kernels" "cross" "nonprism" \
+	"libre-testing" "libre-multilib-testing" "pcr-testing" \
+	"nonprism-testing" )
+
+	for delrepo in ${delrepos[*]}; do
+
+		found=0
+
+		# Check we have an existent libre repo
+		for repo in ${repos[*]}; do
+			if [[ $delrepo == "$repo" ]]; then
+				found=1
+				break
+			fi
+		done
+
+		if [[ $found -eq 0 ]]; then
+			echoerr "${ME,,}: '${delrepo}': No such libre repository"
+			continue
+		fi
+
+		# Check we have an enabled repo
+		if ! [[ $(/usr/bin/pacman-conf -r "$delrepo" 2>/dev/null) ]]; then
+			echoerr "${ME,,}: [${delrepo}]: Repository not enabled"
+			continue
+		fi
+
+		# If valid and enabled, disable it
+		local repo_found=0 counter=0 lines=""
+
+		# Get the line numbers in pacman config file for the repository
+		#+ to be disabled. They will be passed later to 'sed'
+		while read -r line; do
+			(( counter++ ))
+			if [[ $repo_found -eq 0 && $line == "[${delrepo}]" ]]; then
+				repo_found=1
+			fi
+
+			if [[ $repo_found -eq 1 ]]; then
+				case $line in
+					"[${delrepo}]" ) ;;
+					""|"#"*) continue ;;
+					"["*"]") break ;;
+				esac
+
+				lines="${lines};${counter}d"
+			fi
+
+		done < "$PACMAN_CONF_FILE"
+
+		# This should never happen
+		if [[ $repo_found -eq 0 ]]; then
+			echoerr "${ME,,}: [${delrepo}]: Repository not found"
+			exit $EXIT_FAILURE
+		fi
+
+		echo -e "${blue}::$nc$bold Removing [$delrepo] repository" \
+				"from ${PACMAN_CONF_FILE}...$nc "	
+
+		# Remove the lines corresponding to the repo to be disabled from
+		#+ pacman config file
+		/usr/bin/sudo /usr/bin/sed -i "${lines:1}" "$PACMAN_CONF_FILE"
+
+		if ! /usr/bin/sudo /usr/bin/pacman -Sy; then
+			exit $EXIT_FAILURE
+		fi
+
+		# Remove the database files as well
+		/usr/bin/sudo /usr/bin/rm \
+		/var/lib/pacman/sync/${delrepo}.{files,db} 2>/dev/null
+
+	done
 }
 
 ################################
@@ -894,7 +999,7 @@ function list_repos ()
 			if /usr/bin/grep -q "^\[${i}\]" "$PACMAN_CONF_FILE"; then
 				echo -e "${green}[+]$nc [${i}]: Found"
 			else
-				echo -e "${red}[-]$nc [${i}]: No such repository"
+				echo -e "${ME,,}: [${i}]: No such repository"
 			fi
 		done
 	else
@@ -1083,12 +1188,13 @@ function parse_arguments ()
 			download|d) p[$i]="-Sw" ;;
 
 			# Pacfree operations
-			list-rules|lr) p[$i]="-l" ;;
+			check-free|cf) p[$i]="-f" ;;
 			add-rule|ar) p[$i]="-a" ;;
 			del-rule|dr) p[$i]="-d" ;;
-			add-libre|al) p[$i]="-L" ;;
-			list-repos|lr) p[$i]="-r" ;;
-			check-free|cf) p[$i]="-f" ;;
+			list-rules|lr) p[$i]="-l" ;;
+			add-repo|al) p[$i]="-L" ;;
+			del-repo|dl) p[$i]="-x" ;;
+			list-repos|ll) p[$i]="-r" ;;
 
 			list-updates|lu)
 				if [[ $(type -P /usr/bin/checkupdates) ]]; then

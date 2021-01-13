@@ -1,14 +1,15 @@
-./" Manpage for Pacfree
 .TH "PACFREE" "8" "Jan 11, 2021" "Pacfree v0.5+" "Pacfree Manual"
 
 .SH NAME
-Pacfree \- A Pacman wrapper written in Bash aimed to make Pacman free-software aware 
+Pacfree \- A Pacman wrapper written in Bash aimed to make Pacman free-software aware
 
 .SH SYNOPSIS
 \fIpacfree\fR <operation> [options] [targets]
+.sp
+\fIpacfree\fR [targets]
 
 .SH DESCRIPTION
-Whenever a package is to be installed, Pacfree checks the package against Parabola's blacklists, and, if blacklisted, warns the user and let her choose whether to continue installing the package or not. Via the rules list, it also allows to choose repositories on a per package basis. In this way, a ruled package will always be installed/upgraded from the specified repository, disregarding the repositories order in Pacman configuration file.
+Pacfree performs mainly two operations. In the first place, whenever a package is to be installed, its checks the package against Parabola's blacklists, and, if blacklisted, warns the user and let her choose whether to continue installing the package or not. Secondly, via the rules list, it allows to choose repositories on a per package basis. In this way, a ruled package will always be installed/upgraded from the specified repository, disregarding the repositories order in Pacman configuration file.
 
 This manpage only covers options specific to Pacfree. For Pacman specific options see \fBpacman(8)\fR
 
@@ -26,47 +27,56 @@ When it comes to packages and repositories, Pacman default behaviour is to insta
 .TP
 Once Pacfree knows what is to be installed/upgraded, it checks every package against a rules list, and, if a rule for the package is found, it installs/upgrades the package from the specified repository, no matter what is the repositories order in '/etc/pacman.conf'.
 .TP
-The main idea of this functionality is to make Pacman able to handle packages with the same name coming from different repositories, for example, 'core/licenses' and 'libre/licenses', or 'community/midori' and 'libre/midori', without the need to explicitly specify the repository in the command line, besides the important fact that it works for upgrades as well. In this way, we can use packages and repositories coming from different Arch based distributions more easily and smoothly.
+The main idea of this functionality is to make Pacman able to handle packages with the same name coming from different repositories, for example, 'core/licenses' and 'libre/licenses', or 'community/midori' and 'libre/midori', without the need to explicitly specify the repository in the command line, besides the important fact that it works for upgrades as well. In this way, we can use packages and repositories coming from different Arch based distributions, especially those providing free/libre packages, more easily and smoothly.
 
 .SH PACFREE OPERATIONS
 .TP
-Besides honoring all Pacman's operations and options (exception made of \-\-ignore and \-\-ignoregroup directives), Pacfree offers the following ones:
+Besides honoring all Pacman's operations and options (exception made of \-\-ignore and \-\-ignoregroup directives), Pacfree offers the following specific operations:
+.TP
+
+.B \-f, \-\-check\-free \fR[package(s)]
+Check package(s) against blacklists. With no argument, lists all non-free installed packages. Else, it checks packages specified as further arguments against the blacklists.
 .TP
 
 .B \-a, \-\-add\-rule \fR<rule(s)>
 Add rule(s) specified as argument(s) to the rules list. If a rule, always in the form 'repo/pkg', is added to the rules list for a given package, this package will always be installed/upgraded from the specified repository, disregarding the repositories order in '/etc/pacman.conf'.
 .TP
 
-.B -b, \-\-full\-blacklist
-Use Parabola's full blacklist instead of the  trimmed down one. By default, Pacfree removes from this blacklist packages blacklisted merely because of branding and/or technical issues, like 'pacman', 'grub' or 'filesystem', simply because they are in themselves free. According to Parabola's blacklist, indeed, 'core/filesystem' is non-free; that's why Parabola offers a "free" version of it: 'libre/filesystem'. However, the reason behind this has nothing to do with FOSS: some files provided by 'core/silesystem', like '/usr/lib/os-release' and '/usr/share/factory/etc/issue', contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking one. This is why by default Pacfree removes all these packages from the blacklist.
-.TP
-
-.B \-f, \-\-check\-free \fR<package(s)>
-Check package(s) against blacklists. With no argument, lists all non-free installed packages. Else, it checks packages specified as further arguments against the blacklists.
+.B \-d, \-\-del\-rule \fR<rule(s)>
+Remove rules from the rules list.
 .TP
 
 .B \-l, \-\-list\-rules
 List currently enabled rules.
 .TP
 
-.B \-L, \-\-add\-libre \fR<repo(s)>
+.B \-L, \-\-add\-repo \fR[repo(s)]
 Add and enable free/libre repositories (Parabola). With no argument, the user will be asked whether to enable or not each of the libre repositories. Otherwise, only repositories specified as arguments will be added. Valid repositories are: libre, pcr, kernels, cross, nonprism, libre-multilib, libre-testing, pcr-testing, libre-multilib-testing, and nonprism-testing.
 .TP
 
-.B \-r, \-\-list\-repos \fR<repo(s)>
+.B \-x, \-\-del\-repo \fR<repo(s)>
+Disable free/libre repositories specified as further arguments.
+.TP
+
+.B \-r, \-\-list\-repos \fR[repo(s)]
 List currently enabled repositories or check repositories specified as further arguments.
 .TP
-
 .B \-u, \-\-upgrademe
-Check current upstream version
+Check current upstream version.
 .TP
 
-If no operation is specified, but only packages, -Syu is assumed
+If no operation is specified, but only packages, -Syu is assumed.
+
+.SH OPTIONS
+.TP
+.B \-b, \-\-full\-blacklist
+Use Parabola's full blacklist instead of the  trimmed down one. By default, Pacfree removes from this blacklist packages blacklisted merely because of branding and/or technical issues, like 'pacman', 'grub' or 'filesystem', simply because they are in themselves free. According to Parabola's blacklist, indeed, 'core/filesystem' is non-free; that's why Parabola offers a "free" version of it: 'libre/filesystem'. However, the reason behind this has nothing to do with FOSS: some files provided by 'core/silesystem', like '/usr/lib/os-release' and '/usr/share/factory/etc/issue', contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking one. This is why by default Pacfree removes all these packages from the blacklist.
 .TP
 
-Use \-\-color=never or \-nc to disable colored output
-.TP
+.B \-\-color=[auto,always,never] 
+Enable or disable colored output (default value: auto). -nc can be used as a short version of --color=never
 
+.SH ALTERNATIVE SYNTAX
 For those users coming from Debian/RedHat based systems, the following APT/DNF-like syntax (and its abbreviated form) is recognized (the Pacman/Pacfree equivalent is provided in parentheses and is always the recommended way to go):
 
  install,i (\-S)
@@ -91,13 +101,36 @@ For those users coming from Debian/RedHat based systems, the following APT/DNF-l
  clean-all,ca (\-Scc)
  download,d (\-Sw)
  history,logs,l [pkg ...] (grep \"pkg ...\" /var/log/pacman.log)
- list-repos,lr ('pacfree \-r' or 'pacman-conf \-l' )
  check-free,cf (pacfree \-f)
  list-rules,lr (pacfree \-l)
  add-rule,ar (pacfree \-a)
- add-libre,al (pacfree \-L)
+ del-rule,dr (pacfree \-d)
+ add-repo,al (pacfree \-L)
+ del-repo,dl (pacfree \-x)
+ list-repos,ll ('pacfree \-r' or 'pacman-conf \-l' )
  help (\-h)
  version (\-V)
+
+.SH EXAMPLES
+.TP
+pacfree \fIfoo\fR
+Update the database, check packages to be upgraded, if any, against the rules list and \fIfoo\fR against both the rules list and the blacklist, upgrade the system, and install \fIfoo\fR
+
+.TP
+pacfree \-Syu
+Update the database, check packages to be upgraded against the rules list, and upgrade the system.
+
+.TP
+pacfree \-S \fIfoo\fR
+Check \fIfoo\fR against both the rules list and the blacklist, and, if everything is fine, install the packge
+
+.TP
+pacfree \-L libre
+Add and enable Parabola's [libre] repository
+
+.TP
+pacfree \-a \fIlibre/licenses\fR
+Add the rule \fIlibre/licenses\fR to Pacfree rules list
 
 .SH FILES
 The configration file is \fI$HOME/.config/pacfree/pacfree.conf\fR
