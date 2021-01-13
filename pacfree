@@ -29,6 +29,7 @@
 #+ -f | --check-free (check for non-free installed packages)
 #+ -L | --add-libre (Add and enable [libre] repository)
 #+ -a | --add-rule (Add new repo rule)
+#+ -d | --del-rule (Remove repo rule)
 #+ -l | --list-rules (List current rules)
 #+ -r | --list-repos (List currently enabled repos)
 
@@ -110,7 +111,9 @@ function help ()
 						"package will always be installed/upgraded from" \
 						"the specified repository, disregarding the" \
 						"repositories order in pacman configuration file" \
-						"\n\nUsage: ${ME,,} <operation> [...]\n"
+						"\n\nUsage:" \
+						"\n    ${ME,,} <package(s)>" \
+						"\n    ${ME,,} <operation> [...]\n"
 
 				echo -e "Operations:
     ${ME,,} {-h --help}
@@ -137,9 +140,7 @@ echo -e "\n$ME specific operations:
     ${ME,,} {-u --upgrademe}
 
 Use '${ME,,} {-h --help}' with an operation for more information
-
 If no operation is specified, but only packages, -Syu is assumed
-
 Use --color=never or -nc to disable colored output
 
 For those users coming from Debian/RedHat based systems, the following \
@@ -173,7 +174,7 @@ recommended way to go):
     check-free,cf (pacfree -f)
     list-rules,lr (pacfree -l)
     add-rule,ar (pacfree -a)
-	del-rule,dl (pacfree -d)
+    del-rule,dl (pacfree -d)
     add-libre,al (pacfree -L)
     help (-h)
     version (-V)"
