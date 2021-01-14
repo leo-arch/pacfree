@@ -37,7 +37,8 @@
 ### TODO LIST ###
 # 1) --ignore and --ignoregroup directives won't work
 # 2) Package managers different to pacman and powerpill will most
-#+ likely fail (because of having different options)
+#+ likely fail (because of having different options). DO NOT ALLOW
+#+ THE USE OF DIFFERENT PAC-MANS
 # 3) Make isfree use the same blacklist filenames as pacfree
 
 ### COLORS ###
@@ -52,9 +53,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.7"
+VERSION="0.5.8"
 AUTHOR="L. Abramovich"
-DATE="Jan 13, 2021"
+DATE="Jan 14, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -339,7 +340,7 @@ function check_sys_free ()
 				"package found"
 	else
 		echo -e "\n${red}[-]$nc $nonfree non-free/libre" \
-				"package found"
+				"packages found"
 	fi
 }
 
@@ -1203,23 +1204,7 @@ function parse_arguments ()
 			list-repos|ll) p[$i]="-r" ;;
 
 			list-updates|lu)
-				if [[ $(type -P /usr/bin/checkupdates) ]]; then
-
-					echo -e "${blue}::$nc$bold Checking available" \
-							"upgrades... $nc"
-					/usr/bin/checkupdates || exit $EXIT_FAILURE
-				else
-					local options="--color=auto"
-					[[ $color_ok -eq 0 ]] && options="--color=never"
-					/usr/bin/sudo /usr/bin/pacman "$options" -Sy \
-					|| exit $EXIT_FAILURE
-
-					echo -e "${blue}::$nc$bold Available" \
-							"upgrades: $nc"
-					/usr/bin/pacman "$options" -Qu \
-					|| exit $EXIT_FAILURE
-				fi
-
+				list_updates
 				exit $EXIT_SUCCESS
 			;;
 
@@ -1261,7 +1246,7 @@ function parse_arguments ()
 			;;
 
 			--sync)
-				sync_value="--sync"
+				sync_value="${p[$i]}"
 				sync_index=$i
 			;;
 
@@ -1299,8 +1284,8 @@ function parse_arguments ()
 		# Check non-install LONG suboptions for --sync.
 		if [[ -n $sync_value ]]; then
 			case ${p[$i]} in
-				--print|--clean|--groups|--info|--list|--search\
-				|--downloadonly|--help)
+				--clean|--groups|--help|--info|--list|--search\
+				|--downloadonly|--print)
 					no_install=1
 				;;
 			esac
@@ -1320,6 +1305,30 @@ function parse_arguments ()
 		fi
 
 	done
+}
+
+################################
+
+function list_updates ()
+{
+	if [[ $(type -P /usr/bin/checkupdates) ]]; then
+
+		echo -e "${blue}::$nc$bold Checking available" \
+				"upgrades... $nc"
+		/usr/bin/checkupdates || exit $EXIT_FAILURE
+	else
+		echoerr "${ME,,}: 'checkupdates': Command not found"
+		exit $EXIT_ERROR
+#		local options="--color=auto"
+#		[[ $color_ok -eq 0 ]] && options="--color=never"
+#		/usr/bin/sudo /usr/bin/pacman "$options" -Sy \
+#		|| exit $EXIT_FAILURE
+#
+#		echo -e "${blue}::$nc$bold Available" \
+#				"upgrades: $nc"
+#		/usr/bin/pacman "$options" -Qu \
+#		|| exit $EXIT_FAILURE
+	fi
 }
 
 ################################
@@ -1421,9 +1430,14 @@ function check_updates ()
 	# If refresh, well, refresh the database
 	if [[ $do_update -gt 0 ]]; then
 
+		if [[ $do_sysupgrade -eq 0 && ${#PKGS[*]} -gt 0 ]]; then
+			echoerr "${yellow}Warning${nc}: Partial upgrades are" \
+					"unsupported. Use '-Syu' instead of '-Sy'"
+		fi
+
 		# If -S, remove '-y' from sync options
 		# We must also remove -u, if there, since we don't want to
-		#+ upgrade the system now
+		#+ upgrade the system before performing the corresponding checks
 		if [[ $sync_value == "-S"* && $sync_value == *'y'* ]]; then
 			tmp="${sync_value//[y,u]}"
 			sync_value="$tmp"
@@ -1715,10 +1729,24 @@ function valid_pkg_name ()
 	# Now perform the checks for package names validity
 
 	case $pkg_name in
-		# Exclude strings only valid for --color and --architecture
-		#+ options
-		auto|i[0-6]86|pentium4|x86_64|any|always|never)
-			return $EXIT_FAILURE
+		# Exclude strings only valid for the --architecture option
+		i[3-6]86|pentium4|x86_64|any|armv[5-8]h)
+			if [[ ${p[*]} == *"--arch"* ]]; then
+				return $EXIT_FAILURE
+			fi
+		;;
+
+		auto)
+			if [[ ${p[*]} == *"--arch"* || ${p[*]} == *"--color"* ]]; then
+				return $EXIT_FAILURE
+			fi
+		;;
+
+		# Exclude strings only valid for the --color option
+		always|never)
+			if [[ ${p[*]} != *"--color"* ]]; then
+				return $EXIT_FAILURE
+			fi
 		;;
 
 		# If it starts with a hyphen or a dot, it's not a valid
@@ -1877,6 +1905,7 @@ function main ()
 	fi
 
 #	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value ${PKGS[*]}"
+#	echo -e "OPTS: '${OPTS[*]}'\nPKGS: ${PKGS[*]}"
 
 	/usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value \
 	${PKGS[*]} || exit $EXIT_FAILURE
