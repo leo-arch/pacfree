@@ -5,8 +5,6 @@ Pacfree \- A Pacman wrapper written in Bash aimed to make Pacman free-software a
 
 .SH SYNOPSIS
 \fIpacfree\fR <operation> [options] [targets]
-.sp
-\fIpacfree\fR [targets]
 
 .SH DESCRIPTION
 Pacfree performs mainly two operations. In the first place, whenever a package is to be installed, its checks the package against Parabola's blacklists, and, if blacklisted, warns the user and let her choose whether to continue installing the package or not. Secondly, via the rules list, it allows to choose repositories on a per package basis. In this way, a ruled package will always be installed/upgraded from the specified repository, disregarding the repositories order in Pacman configuration file.
@@ -65,8 +63,6 @@ List currently enabled repositories or check repositories specified as further a
 Check current upstream version.
 .TP
 
-If no operation is specified, but only packages, -Syu is assumed.
-
 .SH OPTIONS
 .TP
 .B \-b, \-\-full\-blacklist
@@ -74,10 +70,10 @@ Use Parabola's full blacklist instead of the  trimmed down one. By default, Pacf
 .TP
 
 .B \-\-color=[auto,always,never] 
-Enable or disable colored output (default value: auto). -nc can be used as a short version of --color=never
+Enable or disable colored output (default value: auto). \fB\-nc\fR can be used as a short version of \fB\-\-color=never\fR
 
 .SH ALTERNATIVE SYNTAX
-For those users coming from Debian/RedHat based systems, the following APT/DNF-like syntax (and its abbreviated form) is recognized (the Pacman/Pacfree equivalent is provided in parentheses and is always the recommended way to go):
+For those users coming from Debian/RedHat based systems, the following APT/DNF-like syntax (and its abbreviated form) is supported (the Pacman/Pacfree equivalent is provided in parentheses and is always the recommended way to go):
 
  install,i (\-S)
  install-local,il (\-U)
