@@ -264,7 +264,7 @@ recommended way to go):
 
 check_sys_free ()
 {
-	if [[ "$(type -P /usr/bin/isfrees)" ]]; then
+	if [[ "$(type -P /usr/bin/isfree)" ]]; then
 
 		local options=""
 		[[ $full_blacklist -eq 1 ]] && options="-t"
