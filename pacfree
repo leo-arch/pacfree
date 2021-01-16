@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+				####################################
+				#             PACFREE              #
+				#  The free-software aware pacman  #
+				####################################
+
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
@@ -37,6 +42,7 @@
 #+ -l | --list-rules (List current rules)
 
 ### TODO LIST ###
+
 # 1) Package managers different to pacman and powerpill will most
 #+ likely fail (because of having different options). DO NOT ALLOW
 #+ THE USE OF DIFFERENT PAC-MANS
@@ -56,9 +62,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.5.9"
+VERSION="0.6.0"
 AUTHOR="L. Abramovich"
-DATE="Jan 14, 2021"
+DATE="Jan 15, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -291,10 +297,8 @@ check_sys_free ()
 	#+ this
 
 	mapfile -t non_free_pkgs < <(for ((i=0; i<${#pkgs[*]}; i=$((i+20)))); do
-		/usr/bin/grep "^${pkgs[$i]}:\|^${pkgs[$((i+1))]}:\|^${pkgs[$((i+2))]}:\|^${pkgs[$((i+3))]}:\|^${pkgs[$((i+4))]}:\|^${pkgs[$((i+5))]}:\|^${pkgs[$((i+6))]}:\|^${pkgs[$((i+7))]}:\|^${pkgs[$((i+8))]}:\|^${pkgs[$((i+9))]}:\|^${pkgs[$((i+10))]}:\|^${pkgs[$((i+11))]}:\|^${pkgs[$((i+12))]}:\|^${pkgs[$((i+13))]}:\|^${pkgs[$((i+14))]}:\|^${pkgs[$((i+15))]}:\|^${pkgs[$((i+16))]}:\|^${pkgs[$((i+17))]}:\|^${pkgs[$((i+18))]}:\|^${pkgs[$((i+19))]}:" "$BLACKLIST_FILE" | /usr/bin/cut -d':' -f1
+		/usr/bin/grep -- "^${pkgs[$i]}:\|^${pkgs[$((i+1))]}:\|^${pkgs[$((i+2))]}:\|^${pkgs[$((i+3))]}:\|^${pkgs[$((i+4))]}:\|^${pkgs[$((i+5))]}:\|^${pkgs[$((i+6))]}:\|^${pkgs[$((i+7))]}:\|^${pkgs[$((i+8))]}:\|^${pkgs[$((i+9))]}:\|^${pkgs[$((i+10))]}:\|^${pkgs[$((i+11))]}:\|^${pkgs[$((i+12))]}:\|^${pkgs[$((i+13))]}:\|^${pkgs[$((i+14))]}:\|^${pkgs[$((i+15))]}:\|^${pkgs[$((i+16))]}:\|^${pkgs[$((i+17))]}:\|^${pkgs[$((i+18))]}:\|^${pkgs[$((i+19))]}:" "$BLACKLIST_FILE" | /usr/bin/cut -d':' -f1
 		done)
-
-#	IFS=':'
 
 	for pkg in ${non_free_pkgs[*]}; do
 		while IFS=':' read -r name alternative ref id description; do
@@ -315,7 +319,7 @@ check_sys_free ()
 			"the AUR blacklist...$nc"
 
 	mapfile -t non_free_pkgs_aur < <(for ((i=0; i<${#pkgs[*]}; i=$((i+20)))); do
-		/usr/bin/grep "^${pkgs[$i]}:\|^${pkgs[$((i+1))]}:\|^${pkgs[$((i+2))]}:\|^${pkgs[$((i+3))]}:\|^${pkgs[$((i+4))]}:\|^${pkgs[$((i+5))]}:\|^${pkgs[$((i+6))]}:\|^${pkgs[$((i+7))]}:\|^${pkgs[$((i+8))]}:\|^${pkgs[$((i+9))]}:\|^${pkgs[$((i+10))]}:\|^${pkgs[$((i+11))]}:\|^${pkgs[$((i+12))]}:\|^${pkgs[$((i+13))]}:\|^${pkgs[$((i+14))]}:\|^${pkgs[$((i+15))]}:\|^${pkgs[$((i+16))]}:\|^${pkgs[$((i+17))]}:\|^${pkgs[$((i+18))]}:\|^${pkgs[$((i+19))]}:" "$BLACKLIST_FILE_AUR" | /usr/bin/cut -d':' -f1
+		/usr/bin/grep -- "^${pkgs[$i]}:\|^${pkgs[$((i+1))]}:\|^${pkgs[$((i+2))]}:\|^${pkgs[$((i+3))]}:\|^${pkgs[$((i+4))]}:\|^${pkgs[$((i+5))]}:\|^${pkgs[$((i+6))]}:\|^${pkgs[$((i+7))]}:\|^${pkgs[$((i+8))]}:\|^${pkgs[$((i+9))]}:\|^${pkgs[$((i+10))]}:\|^${pkgs[$((i+11))]}:\|^${pkgs[$((i+12))]}:\|^${pkgs[$((i+13))]}:\|^${pkgs[$((i+14))]}:\|^${pkgs[$((i+15))]}:\|^${pkgs[$((i+16))]}:\|^${pkgs[$((i+17))]}:\|^${pkgs[$((i+18))]}:\|^${pkgs[$((i+19))]}:" "$BLACKLIST_FILE_AUR" | /usr/bin/cut -d':' -f1
 		done)
 
 	for pkg in ${non_free_pkgs_aur[*]}; do
@@ -330,8 +334,6 @@ check_sys_free ()
 					"\n   Free/libre alternative: $alternative"
 		done < "$BLACKLIST_FILE_AUR"
 	done
-
-#	IFS=$' \t\n'
 
 	if [[ $nonfree -eq 0 ]]; then
 		echo -e "\n${green}[+]$nc No non-free/libre packages" \
@@ -390,7 +392,7 @@ add_libre_repos ()
 
 	if ! [[ "$(/usr/bin/pacman -Qq parabola-keyring)" ]]; then
 		local RFSL_OK=0
-		if /usr/bin/grep -q "^RemoteFileSigLevel = Never$" \
+		if /usr/bin/grep -q "^RemoteFileSigLevel = Never$" -- \
 		"$PACMAN_CONF_FILE"; then
 			RFSL_OK=1
 		fi
@@ -399,26 +401,26 @@ add_libre_repos ()
 			echo -e "$blue::$nc$bold Setting RemoteFileSigLevel" \
 					"to Never...$nc "
 			/usr/bin/sudo /usr/bin/sed -i \
-			'/RemoteFileSigLevel/a RemoteFileSigLevel = Never' \
+			'/RemoteFileSigLevel/a RemoteFileSigLevel = Never' -- \
 			"$PACMAN_CONF_FILE" || exit $EXIT_FAILURE
 		fi
 
 		echo -e "$blue::$nc$bold Installing parabola-kerying...$nc "
-		/usr/bin/sudo /usr/bin/pacman -U "$keyring_url" \
+		/usr/bin/sudo /usr/bin/pacman -U -- "$keyring_url" \
 		|| exit $EXIT_FAILURE
 
 		if [[ RFSL_OK -eq 0 ]]; then
 			echo -e "$blue::$nc$bold Reverting changes made to" \
 					"RemoteFileSigLevel...$nc "
 			/usr/bin/sudo /usr/bin/sed -i '/RemoteFileSigLevel = Never/d' \
-			"$PACMAN_CONF_FILE" || exit $EXIT_FAILURE
+			-- "$PACMAN_CONF_FILE" || exit $EXIT_FAILURE
 		fi
 	fi
 
 	if ! [[ -f /etc/pacman.d/parabola_mirrorlist ]]; then
 		echo -e "$blue::$nc$bold Downloading Parabola's" \
 				"mirrorlist...$nc "
-		/usr/bin/sudo /usr/bin/curl -so \
+		/usr/bin/sudo /usr/bin/curl -so -- \
 		/etc/pacman.d/parabola_mirrorlist "$mirrorlist_url" \
 		|| exit $EXIT_FAILURE
 	fi
@@ -447,7 +449,7 @@ add_libre_repos ()
 
 			echo -e "\n[$x]\nInclude =" \
 					"/etc/pacman.d/parabola_mirrorlist" \
-					| /usr/bin/sudo /usr/bin/tee -a "$PACMAN_CONF_FILE" \
+					| /usr/bin/sudo /usr/bin/tee -a -- "$PACMAN_CONF_FILE" \
 					1>/dev/null || exit $EXIT_FAILURE
 
 		elif [[ -n $1 ]]; then
@@ -471,8 +473,8 @@ download_blacklist ()
 	#+ not the full version, delete it
 	if [[ $full_blacklist -eq 1 ]]; then
 		if [[ -f $BLACKLIST_FILE ]]; then
-			if ! /usr/bin/grep -q "^pacman:" "$BLACKLIST_FILE"; then
-				/usr/bin/rm "$BLACKLIST_FILE"
+			if ! /usr/bin/grep -q -- "^pacman:" "$BLACKLIST_FILE"; then
+				/usr/bin/rm -- "$BLACKLIST_FILE"
 			fi
 		fi
 
@@ -480,8 +482,8 @@ download_blacklist ()
 	#+ is the full version, delete it
 	else
 		if [[ -f $BLACKLIST_FILE ]]; then
-			if /usr/bin/grep -q "^pacman:" "$BLACKLIST_FILE"; then
-				/usr/bin/rm "$BLACKLIST_FILE"
+			if /usr/bin/grep -q -- "^pacman:" "$BLACKLIST_FILE"; then
+				/usr/bin/rm -- "$BLACKLIST_FILE"
 			fi
 		fi
 	fi
@@ -490,7 +492,7 @@ download_blacklist ()
 		# If the blacklist file exists and it was last modified one
 		#+ day ago or less, do nothing
 		[[ $(($(/usr/bin/date "+%s") -  \
-		$(/usr/bin/stat -c "%Y" "$BLACKLIST_FILE"))) \
+		$(/usr/bin/stat -c "%Y" -- "$BLACKLIST_FILE"))) \
 		-le 86400 ]] &&	return
 	fi
 
@@ -506,14 +508,14 @@ download_blacklist ()
 
 			# Parse the blacklist to remove technical and branding
 			#+ nonfree packs
-			/usr/bin/grep ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
+			/usr/bin/grep -- ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
 			/tmp/blacklist_full | sudo -u "$user" \
-			tee "$BLACKLIST_FILE" 1>/dev/null \
+			tee -- "$BLACKLIST_FILE" 1>/dev/null \
 			|| exit $EXIT_FAILURE
 
 			/usr/bin/rm /tmp/blacklist_full 2>/dev/null
 		else
-			/usr/bin/sudo -u "$user" /usr/bin/cp \
+			/usr/bin/sudo -u "$user" /usr/bin/cp -- \
 			/tmp/blacklist_full "$BLACKLIST_FILE" \
 			|| exit $EXIT_FAILURE
 
@@ -533,16 +535,16 @@ download_blacklist_aur ()
 		# If the blacklist file exists and it was last modified one
 		#+ day ago or less, do nothing
 		[[ $(($(/usr/bin/date "+%s") -  \
-		$(/usr/bin/stat -c "%Y" "$BLACKLIST_FILE_AUR"))) \
+		$(/usr/bin/stat -c "%Y" -- "$BLACKLIST_FILE_AUR"))) \
 		-le 86400 ]] &&	return
 	fi
 
 	echo -ne "$blue::$nc$bold Downloading packages blacklist" \
 			 "(AUR)... $nc"
 
-	if /usr/bin/curl -s "$BLACKLIST_SOURCE_AUR" \
+	if /usr/bin/curl -s -- "$BLACKLIST_SOURCE_AUR" \
 	| /usr/bin/sed 's/  //g' \
-	| /usr/bin/sudo -u "$user" /usr/bin/tee "$BLACKLIST_FILE_AUR" \
+	| /usr/bin/sudo -u "$user" /usr/bin/tee -- "$BLACKLIST_FILE_AUR" \
 	1> /dev/null; then
 
 		echo -e "${green}OK$nc"
@@ -662,7 +664,7 @@ check_free ()
 		fi
 
 		# Check if $pkg is blacklisted
-		blacklisted="$(/usr/bin/grep "^${pkg}:" "$BLACKLIST_FILE" \
+		blacklisted="$(/usr/bin/grep -- "^${pkg}:" "$BLACKLIST_FILE" \
 		2>/dev/null)"
 
 		# If the package is not blacklisted, and if some unofficial
@@ -670,7 +672,7 @@ check_free ()
 		#+ as well
 		if [[ -z $blacklisted && ($unofficial_repos -eq 1
 		|| $external -eq 1) ]]; then
-			blacklisted="$(/usr/bin/grep "^${pkg}:" \
+			blacklisted="$(/usr/bin/grep -- "^${pkg}:" \
 			"$BLACKLIST_FILE_AUR" 2>/dev/null)"
 			aur=1
 		fi
@@ -742,7 +744,8 @@ list_rules ()
 {
 	local rules=() rule=""
 
-	mapfile -t rules < <(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null)
+	mapfile -t rules < <(/usr/bin/grep -v -- "^$\|^#" "$RULES_FILE" \
+	2>/dev/null)
 
 	if [[ ${#rules[*]} -gt 0 ]]; then
 		for rule in ${rules[*]}; do
@@ -949,13 +952,13 @@ del_repo ()
 		#+ from the file
 		# NOTE: I would be better to find a way of doing this while
 		#+ preserving file attributes
-		/usr/bin/sed "${lines:1}" "$PACMAN_CONF_FILE" | /usr/bin/cat -s \
-		| /usr/bin/sudo /usr/bin/tee "$PACMAN_CONF_FILE" 1>/dev/null
+		/usr/bin/sed "${lines:1}" -- "$PACMAN_CONF_FILE" | /usr/bin/cat -s \
+		| /usr/bin/sudo /usr/bin/tee -- "$PACMAN_CONF_FILE" 1>/dev/null
 
-		/usr/bin/sudo /usr/bin/pacman -Sy || exit $EXIT_FAILURE
+		/usr/bin/sudo /usr/bin/pacman -Sy
 
 		# Remove the database files as well
-		/usr/bin/sudo /usr/bin/rm \
+		/usr/bin/sudo /usr/bin/rm -- \
 		/var/lib/pacman/sync/"$delrepo".{files,db} 2>/dev/null
 
 	done
@@ -973,7 +976,7 @@ upgrade_me ()
 	declare -r RAW_URL="https://raw.githubusercontent.com/leo-arch/pacfree/master/pacfree"
 	local upstream_version=""
 
-	upstream_version="$(/usr/bin/curl -s "$RAW_URL" \
+	upstream_version="$(/usr/bin/curl -s -- "$RAW_URL" \
 	| /usr/bin/grep ^"VERSION=" | /usr/bin/cut -d'=' -f2 \
 	| /usr/bin/sed 's/"//g')"
 
@@ -983,6 +986,7 @@ upgrade_me ()
 		exit $EXIT_FAILURE
 	fi
 
+	# vercmp does not support "--"
 	local res="$(/usr/bin/vercmp "$upstream_version" "$VERSION")"
 	if [[ $res -gt 0 ]]; then
 		echo "${ME,,}: Available upgrade ($upstream_version)"
@@ -1005,14 +1009,14 @@ list_repos ()
 
 	if [[ -n "$1" ]]; then
 		for i in "$@"; do
-			if /usr/bin/grep -q "^\[$i\]" "$PACMAN_CONF_FILE"; then
+			if /usr/bin/grep -q -- "^\[$i\]" "$PACMAN_CONF_FILE"; then
 				echo -e "${green}[+]$nc [$i]: Enabled"
 			else
 				echo -e "${ME,,}: [$i]: No such repository"
 			fi
 		done
 	else
-		/usr/bin/grep "^\[.*\]" "$PACMAN_CONF_FILE" \
+		/usr/bin/grep -- "^\[.*\]" "$PACMAN_CONF_FILE" \
 		| /usr/bin/grep -v "options" | /usr/bin/tr -d "\[\]"
 		# Or just '/usr/bin/pacman-conf -l'
 	fi
@@ -1028,11 +1032,11 @@ del_rule ()
 
 	for rule in ${del_rules[*]}; do
 
-		if ! /usr/bin/grep -q ^"$rule"$ "$RULES_FILE"; then
+		if ! /usr/bin/grep -q -- ^"$rule"$ "$RULES_FILE"; then
 			echoerr "${ME,,}: '$rule': No such rule"
 			(( err++ ))
 			continue
-		elif /usr/bin/sed -i "/^${rule/\//\\\/}$/d" "$RULES_FILE"; then
+		elif /usr/bin/sed -i "/^${rule/\//\\\/}$/d" -- "$RULES_FILE"; then
 			echo -e "${green}[+]$nc '$rule': Rule successfully removed"
 		else
 			(( err++ ))
@@ -1084,11 +1088,11 @@ add_rule ()
 			continue
 		fi
 
-		if /usr/bin/grep -q "$rule" "$RULES_FILE"; then
+		if /usr/bin/grep -q -- "$rule" "$RULES_FILE"; then
 			echoerr "${ME,,}: '$rule': Rule already exists"
 			continue
 		else
-			echo "$rule" | /usr/bin/sudo -u "$user" /usr/bin/tee -a \
+			echo "$rule" | /usr/bin/sudo -u "$user" /usr/bin/tee -a -- \
 			"$RULES_FILE" 1>/dev/null || exit $EXIT_FAILURE
 
 			echo -e "${green}[+]$nc '$rule': Rule successfully added"
@@ -1103,7 +1107,7 @@ print_logs ()
 	declare -r LOG_FILE="/var/log/pacman.log"
 
 	if [[ -z $1 ]]; then
-		/usr/bin/cat "$LOG_FILE" || exit $EXIT_FAILURE
+		/usr/bin/cat -- "$LOG_FILE" || exit $EXIT_FAILURE
 
 	else
 		local args=() filter="" grep_color=""
@@ -1120,7 +1124,7 @@ print_logs ()
 			grep_color="--color=never"
 		fi
 
-		/usr/bin/grep "$grep_color" "$filter" "$LOG_FILE" \
+		/usr/bin/grep "$grep_color" -- "$filter" "$LOG_FILE" \
 		|| exit $EXIT_FAILURE
 	fi
 }
@@ -1361,7 +1365,8 @@ check_rules ()
 
 	### LOAD REPO RULES ###
 
-	mapfile -t rules < <(/usr/bin/grep -v "^$\|^#" "$RULES_FILE" 2>/dev/null)
+	mapfile -t rules < <(/usr/bin/grep -v -- "^$\|^#" "$RULES_FILE" \
+	2>/dev/null)
 
 	echo -e "$blue::$nc$bold Checking packages against rules...$nc "
 
@@ -1594,7 +1599,7 @@ init_config ()
 	RULES_FILE="$CONFIG_DIR/rules.conf"
 
 	if ! [[ -d "$CONFIG_DIR" ]]; then
-		/usr/bin/sudo -u "$user" /usr/bin/mkdir -pm 700 "$CONFIG_DIR" \
+		/usr/bin/sudo -u "$user" /usr/bin/mkdir -pm 700 -- "$CONFIG_DIR" \
 		|| exit $EXIT_FAILURE
 	fi
 
@@ -1618,10 +1623,10 @@ color=true
 # checks would make $ME useless, it might be usefull in some cases
 check_rules=true
 check_free=true
-" | /usr/bin/sudo -u "$user" /usr/bin/tee "$CONFIG_FILE" 1>/dev/null \
+" | /usr/bin/sudo -u "$user" /usr/bin/tee -- "$CONFIG_FILE" 1>/dev/null \
 || exit $EXIT_FAILURE
 
-	/usr/bin/chmod 600 "$CONFIG_FILE"
+	/usr/bin/chmod 600 -- "$CONFIG_FILE"
 
 	fi
 
@@ -1635,10 +1640,10 @@ check_free=true
 # Example:
 # core/filesystem
 # libre/licenses
-" | /usr/bin/sudo -u "$user" /usr/bin/tee "$RULES_FILE" 1>/dev/null \
+" | /usr/bin/sudo -u "$user" /usr/bin/tee -- "$RULES_FILE" 1>/dev/null \
 || exit $EXIT_FAILURE
 
-	/usr/bin/chmod 600 "$RULES_FILE"
+	/usr/bin/chmod 600 -- "$RULES_FILE"
 
 	fi
 
@@ -1646,7 +1651,7 @@ check_free=true
 
 	local full_bl_value="" color="" rules_value="" free_value=""
 
-	full_bl_value="$(/usr/bin/grep "^full_blacklist=" \
+	full_bl_value="$(/usr/bin/grep -- "^full_blacklist=" \
 	"$CONFIG_FILE" | /usr/bin/cut -d"=" -f2)"
 
 	case $full_bl_value in
@@ -1655,7 +1660,7 @@ check_free=true
 		*) full_blacklist=0 ;; # Default value
 	esac
 
-	PACMAN="$(/usr/bin/grep "^pac_man=" "$CONFIG_FILE" \
+	PACMAN="$(/usr/bin/grep -- "^pac_man=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)"
 
 	if [[ -z $PACMAN ]]; then
@@ -1672,7 +1677,7 @@ check_free=true
 #		read -rsp "Press Enter to continue or Ctrl-c to exit... "
 	fi
 
-	color="$(/usr/bin/grep "^color=" "$CONFIG_FILE" \
+	color="$(/usr/bin/grep -- "^color=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)"
 
 	case $color in
@@ -1688,7 +1693,7 @@ check_free=true
 		pacman_color="--color=never"
 	fi
 
-	rules_value="$(/usr/bin/grep "^check_rules=" "$CONFIG_FILE" \
+	rules_value="$(/usr/bin/grep -- "^check_rules=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)"
 
 	case $rules_value in
@@ -1697,7 +1702,7 @@ check_free=true
 		*) rules_ok=1 ;;
 	esac
 
-	free_value="$(/usr/bin/grep "^check_free=" "$CONFIG_FILE" \
+	free_value="$(/usr/bin/grep -- "^check_free=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)"
 
 	case $free_value in
@@ -1814,8 +1819,8 @@ check_unofficial_repos ()
 {
 	# Remove official repos from the repos list. If something remains,
 	#+ it's unofficial
-	if /usr/bin/grep "^\[" "$PACMAN_CONF_FILE" \
-	| /usr/bin/grep -qv "options\|core\|extra\|community\|community-testing\|multilib\|multilib-testing\|testing\|gnome-unstable\|kde-unstable"; then
+	if /usr/bin/grep -- "^\[" "$PACMAN_CONF_FILE" \
+	| /usr/bin/grep -qv -- "options\|core\|extra\|community\|community-testing\|multilib\|multilib-testing\|testing\|gnome-unstable\|kde-unstable"; then
 		unofficial_repos=1
 
 	# Pacman wrappers like yay or trizen can install packages from the
