@@ -1,6 +1,12 @@
 # PacFree
-
 > Making pacman free-software aware
+
+### Packages
+
+[![pacfree](https://img.shields.io/aur/version/pacfree?color=1793d1&label=pacfree&logo=arch-linux&style=for-the-badge)](https://aur.archlinux.org/packages/pacfree/)
+[![License](https://img.shields.io/github/license/leo-arch/pacfree?color=333333&style=for-the-badge)](https://github.com/leo-arch/pacfree/blob/master/LICENSE)
+
+## Description
 
 ![pacfree](https://github.com/leo-arch/pacfree/blob/master/screenshots/free_pacman.png)
 
@@ -19,7 +25,7 @@ The main idea of this functionality is to make `pacman` able to handle packages 
 
 If you are concerned with free-software, just as I am, you don't need to move away from Arch: it is just too great to be left behind. Instead, you can help to make it even better, more free, and more powerful. This is the reason of this wrapper. Of course, it is far from perfect, but it's better than none.
 
-## Using pacfree:
+## Using pacfree
 
 PacFree is available on the AUR (https://aur.archlinux.org/packages/isfree)
 
