@@ -62,9 +62,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.6.0"
+VERSION="0.6.1"
 AUTHOR="L. Abramovich"
-DATE="Jan 15, 2021"
+DATE="Jan 29, 2021"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -508,7 +508,7 @@ download_blacklist ()
 
 			# Parse the blacklist to remove technical and branding
 			#+ nonfree packs
-			/usr/bin/grep -- ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]" \
+			/usr/bin/grep -- ":\[semifree\]\|:\[nonfree\]\|:\[uses-nonfree\]\|^[^[]*$" \
 			/tmp/blacklist_full | sudo -u "$user" \
 			tee -- "$BLACKLIST_FILE" 1>/dev/null \
 			|| exit $EXIT_FAILURE
