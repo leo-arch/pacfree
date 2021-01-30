@@ -40,7 +40,7 @@ Navigate to the directory called `pacfree`; you will find here the PKGBUILD file
 	$ makepkg -si
 	$ pacfree -h
 
-** NOTE **: To preserve the "pacman" name, you can create a symlink in `/usr/local/bin` called `pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, `pacfree` will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you still can do it specifying the complete path to pacman's binary: `/usr/bin/pacman`.
+**NOTE**: To preserve the "pacman" name, you can create a symlink in `/usr/local/bin` called `pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `PATH`, whenever you call `pacman` from the command line, with or without `sudo`, `pacfree` will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you still can do it specifying the complete path to pacman's binary: `/usr/bin/pacman`.
 
 ## PacFree and IsFree
 
@@ -50,7 +50,7 @@ I added two simple options to those originally provided by `pacman`: `-f --check
 
 The second added function is `-L --add-libre`, which lets you add and enable Parabola's free/libre repositories to pacman database.
 
-**NOTE**: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this has nothing to do with `FOSS`: some files provided by `core/silesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre".
+**NOTE**: According to Parabola's blacklist, `core/filesystem` is "non-free"; that's why Parabola offers a "free" version of it: `libre/filesystem`. However, the reason behind this has nothing to do with `FOSS`: some files provided by `core/filesystem`, like `/usr/lib/os-release` and `/usr/share/factory/etc/issue`, contain the name "Arch Linux" instead of "Parabola". That's all: there's no free-software issue here, but just a trademarking issue. On the other side, `/usr/lib/os-release` is responsible for the welcome message you see at boot time. So, if you install `libre/filesystem`, "Welcome to Arch Linux" will be replaced by "Welcome to Parabola GNU/Linux libre".
 
 This is why `pacfree` automatically removes this kind of blacklisted packages (that is, those based on trademarking and merely technical issues) from Parabola's blacklist, allowing thus only those marked as truly non-free, namely, those tagged as `[nonfree]`, `[semifree]`, and/or `[uses-nonfree]`.
 
