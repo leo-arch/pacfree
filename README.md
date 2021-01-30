@@ -40,7 +40,7 @@ Navigate to the directory called `pacfree`; you will find here the PKGBUILD file
 	$ makepkg -si
 	$ pacfree -h
 
-**NOTE**: To preserve the "pacman" name, you can create a symlink in `/usr/local/bin` called `pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `$PATH`, whenever you call `pacman` from the command line, with or without `sudo`, `pacfree` will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you still can do it specifying the complete path to pacman's binary: `/usr/bin/pacman`.
+**NOTE**: To preserve the "pacman" name, you can create a symlink in `/usr/local/bin` called `pacman` pointing to `/usr/bin/pacfree`. In doing this, insofar as `/usr/local/bin` precedes `/usr/bin` in `PATH`, whenever you call `pacman` from the command line, with or without `sudo`, `pacfree` will be executed instead of `/usr/bin/pacman`, which in turn will be executed later by the wrapper itself. Of course, if you want to run the original `pacman`, you still can do it specifying the complete path to pacman's binary: `/usr/bin/pacman`.
 
 ## PacFree and IsFree
 
