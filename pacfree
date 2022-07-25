@@ -62,9 +62,9 @@ nc="\033[0m"
 ### PROGRAM DATA ###
 
 ME="PacFree"
-VERSION="0.6.1"
+VERSION="0.6.2"
 AUTHOR="L. Abramovich"
-DATE="Jan 29, 2021"
+DATE="Jul 25, 2022"
 LICENSE="GPL2"
 WEBSITE="https://github.com/leo-arch/pacfree"
 
@@ -268,10 +268,19 @@ recommended way to go):
 
 ################################
 
+is_ignored ()
+{
+	local name="$1"
+	for ign_pkg in ${IGNORED[*]}; do
+		[[ "$ign_pkg" == "$name" ]] && return $EXIT_SUCCESS
+	done
+
+	return $EXIT_FAILURE
+}
+
 check_sys_free ()
 {
-	if [[ "$(type -P /usr/bin/isfree)" ]]; then
-
+	if [[ ${#IGNORED[@]} -eq 0 && "$(type -P /usr/bin/isfree)" ]]; then
 		local options=""
 		[[ $full_blacklist -eq 1 ]] && options="-t"
 		[[ $color_ok -eq 1 ]] && options="$options -c"
@@ -303,6 +312,13 @@ check_sys_free ()
 	for pkg in ${non_free_pkgs[*]}; do
 		while IFS=':' read -r name alternative ref id description; do
 			[[ $name != "$pkg" ]] && continue
+
+			# Check ignored packages
+			if is_ignored "$name"; then
+				ign_list=(${ign_list[@]} "$name")
+				continue
+			fi
+
 			(( nonfree++ ))
 			if [[ -z $alternative ]]; then
 				alternative="$(extra_alternatives "$name")"
@@ -337,13 +353,21 @@ check_sys_free ()
 
 	if [[ $nonfree -eq 0 ]]; then
 		echo -e "\n${green}[+]$nc No non-free/libre packages" \
-				"found. Uncle RMS smiles!"
+			"found. Uncle RMS smiles!"
 	elif [[ $nonfree -eq 1 ]]; then
 		echo -e "\n${red}[-]$nc $nonfree non-free/libre" \
-				"package found"
+			"package found"
 	else
 		echo -e "\n${red}[-]$nc $nonfree non-free/libre" \
-				"packages found"
+			"packages found"
+	fi
+
+	if [[ "${#ign_list[@]}" -eq 1 ]]; then
+		echo -e "${red}[-]$nc 1 non-free/libre ignored package:" \
+			"${red}${ign_list[*]}$nc"
+	elif [[ "${#ign_list[@]}" -gt 1 ]]; then
+		echo -e "${red}[-]$nc ${#ign_list[@]} non-free/libre ignored packages:" \
+			"${red}${ign_list[*]}$nc"
 	fi
 }
 
@@ -640,6 +664,14 @@ check_free ()
 			esac
 		fi
 
+		# Check ignored packages
+		if [[ $external -eq 1 ]]; then
+			if is_ignored "$pkg"; then
+				ign_list=(${ign_list[@]} "$pkg")
+				continue
+			fi
+		fi
+
 		if [[ -n $repo ]]; then
 			case $repo in
 
@@ -727,7 +759,16 @@ check_free ()
 		fi
 	done
 
-	[[ $external -eq 1 ]] && exit $EXIT_SUCCESS
+	if [[ $external -eq 1 ]]; then
+		[[ ${#ign_list[@]} -eq 0 ]] && exit $EXIT_SUCCESS
+		if [[ ${#ign_list[@]} -eq 1 ]]; then
+			echo -e "${red}[-]$nc 1 non-free/libre package ignored: ${red}${ign_list[*]}$nc"
+		elif [[ ${#ign_list[@]} -gt 1 ]]; then
+			echo -e "${red}[-]$nc ${#ign_list[@]} non-free/libre packages" \
+				"ignored: ${red}${ign_list[*]}$nc"
+		fi
+		exit $EXIT_SUCCESS
+	fi
 
 	# If no pkg left after this check, just exit
 	[[ $pkgs_counter -eq 0 ]] && exit $EXIT_SUCCESS
@@ -1623,6 +1664,10 @@ color=true
 # checks would make $ME useless, it might be usefull in some cases
 check_rules=true
 check_free=true
+
+# Comma separated list of packages to be ignored during the free
+# packages check (-f)
+#ignore=\"pkg1,pkg2\"
 " | /usr/bin/sudo -u "$user" /usr/bin/tee -- "$CONFIG_FILE" 1>/dev/null \
 || exit $EXIT_FAILURE
 
@@ -1662,6 +1707,12 @@ check_free=true
 
 	PACMAN="$(/usr/bin/grep -- "^pac_man=" "$CONFIG_FILE" \
 	| /usr/bin/cut -d"=" -f2)"
+
+	# Get the list of ignored packages, if any
+	OLD_IFS="$IFS"
+	IFS=","
+	read -ra IGNORED <<< "$(/usr/bin/grep ^"ignore=" "$CONFIG_FILE" | /usr/bin/cut -d\" -f2)"
+	IFS="$OLD_IFS"
 
 	if [[ -z $PACMAN ]]; then
 		PACMAN="pacman"
@@ -1846,6 +1897,8 @@ main ()
 
 	PKGS=() # List of packages to operate on
 	OPTS=() # Everything that is not a package (except the sync string)
+	IGNORED=() # List of ignored packages (no free-software check (-f) for them)
+
 	user="" # User running the program
 	sync_value="" # Sync string. Ex: -Syu or --sync
 	# Should we install/upgrade some package? If not, check_free()
@@ -1947,12 +2000,6 @@ main ()
 					"upgrade and installing new packages...$nc"
 		fi
 	fi
-
-#	echo "/usr/bin/$PACMAN $pacman_color ${OPTS[*]} $sync_value -- '${PKGS[*]}'"
-#	echo -e "OPTS: '${OPTS[*]}'" \
-#			"\nPKGS: ${PKGS[*]}" \
-#			"\nsync: $sync_value" \
-#			"\ncolor: $pacman_color"
 
 	/usr/bin/"$PACMAN" $pacman_color ${OPTS[*]} $sync_value -- \
 	${PKGS[*]} || exit $EXIT_FAILURE
