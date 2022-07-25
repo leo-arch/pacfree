@@ -3,7 +3,7 @@
 
 ### Packages
 
-[![pacfree](https://img.shields.io/aur/version/pacfree?color=1793d1&label=pacfree&logo=arch-linux&style=for-the-badge)](https://aur.archlinux.org/packages/pacfree/)
+[![AUR version](https://img.shields.io/aur/version/pacfree?logo=archlinux&label=pacfree&style=for-the-badge)](https://aur.archlinux.org/packages/pacfree/)
 [![License](https://img.shields.io/github/license/leo-arch/pacfree?color=333333&style=for-the-badge)](https://github.com/leo-arch/pacfree/blob/master/LICENSE)
 
 ## Description
